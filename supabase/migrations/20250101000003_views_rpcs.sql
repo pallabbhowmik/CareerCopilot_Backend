@@ -118,7 +118,7 @@ SELECT
 FROM ai_prompts p
 LEFT JOIN ai_requests req ON req.prompt_id = p.id
 LEFT JOIN ai_responses resp ON resp.request_id = req.id
-LEFT JOIN ai_evaluations e ON e.response_id = resp.id
+LEFT JOIN ai_evaluations e ON e.prompt_id = p.id
 GROUP BY p.id, p.skill_name, p.prompt_version, p.status, p.promoted_at;
 
 -- =====================================================
@@ -163,7 +163,7 @@ BEGIN
         (
             SELECT jsonb_agg(
                 jsonb_build_object(
-                    'skill_name', s.name,
+                    'skill_name', s.skill_name,
                     'proficiency', rs.proficiency_level
                 )
             )
@@ -447,6 +447,5 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE INDEX idx_ai_requests_date_skill ON ai_requests(DATE_TRUNC('day', created_at), skill_name);
 CREATE INDEX idx_ai_requests_user_date ON ai_requests(user_id, created_at DESC);
-CREATE INDEX idx_ai_evaluations_response ON ai_evaluations(response_id);
 CREATE INDEX idx_prompt_candidates_status_score ON prompt_candidates(status, avg_score) 
 WHERE status = 'validated';
