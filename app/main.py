@@ -53,15 +53,18 @@ async def lifespan(app: FastAPI):
         environment=settings.ENVIRONMENT if hasattr(settings, 'ENVIRONMENT') else "development"
     )
     
-    # Seed initial data
-    db = SessionLocal()
-    try:
-        seed_templates(db)
-        logger.info("Database seeding completed")
-    except Exception as e:
-        logger.error("Database seeding failed", error=str(e))
-    finally:
-        db.close()
+    # Note: Template seeding disabled for Supabase deployment
+    # Templates should be managed via Supabase admin panel or separate migration
+    # db = SessionLocal()
+    # try:
+    #     seed_templates(db)
+    #     logger.info("Database seeding completed")
+    # except Exception as e:
+    #     logger.error("Database seeding failed", error=str(e))
+    # finally:
+    #     db.close()
+    
+    logger.info("Database seeding skipped (managed via Supabase)")
     
     # Initialize AI orchestrator (lazy loading)
     try:
