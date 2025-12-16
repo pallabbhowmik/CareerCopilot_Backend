@@ -15,50 +15,19 @@ SELECT
     r.user_id,
     r.title AS resume_name,
     rv.id AS version_id,
-    rv.version_number,
+    rv.version,
     rv.created_at AS version_created_at,
-    rv.ats_score,
-    rv.match_percentage,
-    COALESCE(
-        jsonb_build_object(
-            'contact', rv.contact_info,
-            'summary', rv.summary,
-            'sections', (
-                SELECT jsonb_agg(
-                    jsonb_build_object(
-                        'type', rs.section_type,
-                        'order', rs.section_order,
-                        'bullets', (
-                            SELECT jsonb_agg(
-                                jsonb_build_object(
-                                    'text', rb.bullet_text,
-                                    'order', rb.bullet_order,
-                                    'signals', rb.signals
-                                )
-                                ORDER BY rb.bullet_order
-                            )
-                            FROM resume_bullets rb
-                            WHERE rb.section_id = rs.id
-                        )
-                    )
-                    ORDER BY rs.section_order
-                )
-                FROM resume_sections rs
-                WHERE rs.resume_version_id = rv.id
-            )
-        ),
-        '{}'::jsonb
-    ) AS full_content,
+    rv.strength_score,
+    rv.content_structured AS full_content,
     r.created_at,
     r.updated_at
 FROM resumes r
 JOIN resume_versions rv ON r.id = rv.resume_id
-WHERE r.is_active = true
-  AND r.deleted_at IS NULL
+WHERE r.deleted_at IS NULL
   AND rv.id = (
       SELECT id FROM resume_versions
       WHERE resume_id = r.id
-      ORDER BY version_number DESC
+      ORDER BY version DESC
       LIMIT 1
   );
 
@@ -83,17 +52,19 @@ SELECT
     DATE_TRUNC('day', req.created_at) AS request_date,
     req.user_id,
     req.skill_name,
-    req.prompt_version,
+    p.prompt_name,
+    p.prompt_version,
     COUNT(*) AS request_count,
     AVG(req.latency_ms) AS avg_latency_ms,
     SUM(req.input_tokens) AS total_input_tokens,
     SUM(req.output_tokens) AS total_output_tokens,
     SUM(req.estimated_cost_usd) AS total_cost_usd,
-    AVG(CASE WHEN resp.validation_passed THEN 1 ELSE 0 END) AS validation_pass_rate,
+    AVG(CASE WHEN resp.schema_valid THEN 1 ELSE 0 END) AS validation_pass_rate,
     AVG(resp.confidence_score) AS avg_confidence
 FROM ai_requests req
 LEFT JOIN ai_responses resp ON req.id = resp.request_id
-GROUP BY DATE_TRUNC('day', req.created_at), req.user_id, req.skill_name, req.prompt_version;
+LEFT JOIN ai_prompts p ON req.prompt_id = p.id
+GROUP BY DATE_TRUNC('day', req.created_at), req.user_id, req.skill_name, p.prompt_name, p.prompt_version;
 
 -- =====================================================
 -- VIEW: Skill Gap Analysis
@@ -130,29 +101,22 @@ CREATE OR REPLACE VIEW prompt_performance AS
 SELECT 
     p.id AS prompt_id,
     p.skill_name,
-    p.version,
+    p.prompt_version,
     p.status,
-    p.total_uses,
-    p.avg_latency_ms,
-    p.avg_cost_usd,
-    p.success_rate,
     -- Aggregate evaluation metrics
     AVG(e.helpfulness_score) AS avg_helpfulness,
     AVG(e.safety_score) AS avg_safety,
     AVG(e.consistency_score) AS avg_consistency,
     COUNT(DISTINCT e.id) AS evaluation_count,
-    p.deployed_at,
-    p.last_used_at
+    COUNT(DISTINCT req.id) AS total_requests,
+    AVG(req.latency_ms) AS avg_latency_ms,
+    AVG(req.estimated_cost_usd) AS avg_cost_usd,
+    AVG(CASE WHEN resp.validation_passed THEN 1.0 ELSE 0.0 END) AS success_rate,
+    p.promoted_at
 FROM ai_prompts p
-LEFT JOIN ai_requests req ON req.prompt_version = CONCAT(p.skill_name, '_v', p.version)
+LEFT JOIN ai_requests req ON req.prompt_id = p.id
 LEFT JOIN ai_responses resp ON resp.request_id = req.id
-LEFT JOIN ai_evaluations e ON e.response_id = resp.id
-GROUP BY p.id, p.skill_name, p.version, p.status, p.total_uses, 
-         p.avg_latency_ms, p.avg_cost_usd, p.success_rate, p.deployed_at, p.last_used_at;
-
--- =====================================================
--- RPC: Get User's Active Resume with Job Match
--- Purpose: Single call to get resume + job analysis
+GROUP BY p.id, p.skill_name, p.prompt_version, p.status, p.promot
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION get_resume_with_job_match(
@@ -162,9 +126,8 @@ CREATE OR REPLACE FUNCTION get_resume_with_job_match(
 RETURNS TABLE(
     resume_id UUID,
     resume_name TEXT,
-    version_number INTEGER,
-    match_percentage NUMERIC,
-    ats_score NUMERIC,
+    version INTEGER,
+    strength_score INTEGER,
     missing_skills JSONB,
     matched_skills JSONB,
     full_content JSONB
@@ -174,9 +137,8 @@ BEGIN
     SELECT 
         cr.resume_id,
         cr.resume_name,
-        cr.version_number,
-        cr.match_percentage,
-        cr.ats_score,
+        cr.version,
+        cr.strength_score,
         -- Missing skills
         (
             SELECT jsonb_agg(
@@ -221,13 +183,15 @@ CREATE OR REPLACE FUNCTION record_ai_request(
     p_skill_name TEXT,
     p_prompt_version TEXT,
     p_model TEXT,
-    p_temperature NUMERIC,
+    p_prompt_id UUID,
+    p_skill_name TEXT,
     p_input_data JSONB,
-    p_latency_ms INTEGER,
-    p_input_tokens INTEGER,
-    p_output_tokens INTEGER,
-    p_estimated_cost_usd NUMERIC,
-    p_trace_id TEXT DEFAULT NULL
+    p_rendered_prompt TEXT,
+    p_model_name TEXT,
+    p_model_provider TEXT,
+    p_temperature NUMERIC,
+    p_max_tokens INTEGER,
+    p_request_id TEXT DEFAULT NULL
 )
 RETURNS UUID AS $$
 DECLARE
@@ -235,42 +199,30 @@ DECLARE
 BEGIN
     INSERT INTO ai_requests (
         user_id,
+        prompt_id,
         skill_name,
-        prompt_version,
-        model,
-        temperature,
         input_data,
-        latency_ms,
-        input_tokens,
-        output_tokens,
-        estimated_cost_usd,
-        trace_id
+        rendered_prompt,
+        model_name,
+        model_provider,
+        temperature,
+        max_tokens,
+        request_id,
+        started_at
     ) VALUES (
         p_user_id,
+        p_prompt_id,
         p_skill_name,
-        p_prompt_version,
-        p_model,
-        p_temperature,
         p_input_data,
-        p_latency_ms,
-        p_input_tokens,
-        p_output_tokens,
-        p_estimated_cost_usd,
-        COALESCE(p_trace_id, gen_random_uuid()::TEXT)
+        p_rendered_prompt,
+        p_model_name,
+        p_model_provider,
+        p_temperature,
+        p_max_tokens,
+        COALESCE(p_request_id, gen_random_uuid()::TEXT),
+        NOW()
     )
-    RETURNING id INTO v_request_id;
-    
-    -- Update prompt statistics
-    UPDATE ai_prompts
-    SET 
-        total_uses = total_uses + 1,
-        avg_latency_ms = ((avg_latency_ms * total_uses) + p_latency_ms) / (total_uses + 1),
-        avg_cost_usd = ((avg_cost_usd * total_uses) + p_estimated_cost_usd) / (total_uses + 1),
-        last_used_at = NOW()
-    WHERE CONCAT(skill_name, '_v', version) = p_prompt_version;
-    
-    RETURN v_request_id;
-END;
+    RETURNING id INTO v_request_id
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- =====================================================
@@ -293,50 +245,35 @@ DECLARE
 BEGIN
     INSERT INTO ai_responses (
         request_id,
-        raw_output,
-        structured_output,
-        validation_passed,
+        raresponse TEXT,
+    p_parsed_response JSONB,
+    p_schema_valid BOOLEAN,
+    p_validation_errors JSONB,
+    p_confidence_score NUMERIC,
+    p_contains_unsafe_content BOOLEAN
+)
+RETURNS UUID AS $$
+DECLARE
+    v_response_id UUID;
+BEGIN
+    INSERT INTO ai_responses (
+        request_id,
+        raw_response,
+        parsed_response,
+        schema_valid,
         validation_errors,
         confidence_score,
-        safety_check_passed
+        contains_unsafe_content
     ) VALUES (
         p_request_id,
-        p_raw_output,
-        p_structured_output,
-        p_validation_passed,
+        p_raw_response,
+        p_parsed_response,
+        p_schema_valid,
         p_validation_errors,
         p_confidence_score,
-        p_safety_check_passed
+        p_contains_unsafe_content
     )
-    RETURNING id INTO v_response_id;
-    
-    -- Update prompt success rate
-    UPDATE ai_prompts
-    SET success_rate = (
-        SELECT AVG(CASE WHEN validation_passed THEN 1.0 ELSE 0.0 END)
-        FROM ai_responses resp
-        JOIN ai_requests req ON resp.request_id = req.id
-        WHERE CONCAT(ai_prompts.skill_name, '_v', ai_prompts.version) = req.prompt_version
-    )
-    WHERE id IN (
-        SELECT p.id 
-        FROM ai_prompts p
-        JOIN ai_requests req ON CONCAT(p.skill_name, '_v', p.version) = req.prompt_version
-        WHERE req.id = p_request_id
-    );
-    
-    RETURN v_response_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- =====================================================
--- RPC: Calculate ATS Score
--- Purpose: Deterministic scoring based on keywords
--- =====================================================
-
-CREATE OR REPLACE FUNCTION calculate_ats_score(
-    p_resume_version_id UUID,
-    p_job_id UUID
+    RETURNING id INTO v_response_id_job_id UUID
 )
 RETURNS NUMERIC AS $$
 DECLARE
@@ -402,18 +339,20 @@ BEGIN
         pc.skill_name,
         pc.new_prompt_text,
         pc.test_run_count,
-        pc.avg_score,
-        pc.vs_current_delta,
-        pc.created_at
-    FROM prompt_candidates pc
-    WHERE pc.status = 'validated'
-      AND pc.test_run_count >= 100  -- Minimum statistical significance
-      AND pc.avg_score > 0.75       -- Minimum quality bar
-      AND pc.vs_current_delta > 0.05 -- Must be 5%+ better
-      AND pc.created_at > NOW() - INTERVAL '30 days' -- Recent only
-    ORDER BY pc.vs_current_delta DESC;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+        system_prompt TEXT,
+    new_user_prompt_template TEXT,
+    test_run_count INTEGER,
+    avg_score NUMERIC,
+    vs_current_delta NUMERIC,
+    created_at TIMESTAMPTZ
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        pc.id,
+        pc.skill_name,
+        pc.new_system_prompt,
+        pc.new_user_prompt_templateTY DEFINER;
 
 -- =====================================================
 -- RPC: Promote Prompt Candidate to Production
@@ -453,41 +392,42 @@ BEGIN
     IF v_current_prompt_id IS NOT NULL THEN
         UPDATE ai_prompts
         SET status = 'retired'
-        WHERE id = v_current_prompt_id;
-    END IF;
-    
-    -- Get next version number
-    SELECT COALESCE(MAX(version), 0) + 1 INTO v_new_version
+        WHERE id = v_curprompt_version), 0) + 1 INTO v_new_version
     FROM ai_prompts
     WHERE skill_name = v_candidate.skill_name;
     
     -- Create new production prompt
     INSERT INTO ai_prompts (
         skill_name,
-        version,
-        prompt_text,
-        model,
+        prompt_name,
+        prompt_version,
+        system_prompt,
+        user_prompt_template,
+        model_name,
+        model_provider,
         temperature,
-        expected_output_schema,
+        max_tokens,
+        output_schema,
         status,
-        deployed_at,
-        metadata
+        promoted_at,
+        parent_prompt_id,
+        created_by
     )
     SELECT 
         v_candidate.skill_name,
+        v_candidate.skill_name || '_v' || v_new_version,
         v_new_version,
-        v_candidate.new_prompt_text,
-        model,
+        v_candidate.new_system_prompt,
+        v_candidate.new_user_prompt_template,
+        model_name,
+        model_provider,
         temperature,
-        expected_output_schema,
+        max_tokens,
+        output_schema,
         'production',
         NOW(),
-        jsonb_build_object(
-            'promoted_from_candidate', p_candidate_id,
-            'promoted_by', p_admin_user_id,
-            'predecessor_prompt', v_current_prompt_id,
-            'test_results', jsonb_build_object(
-                'test_run_count', v_candidate.test_run_count,
+        v_current_prompt_id,
+        p_admin_user_id       'test_run_count', v_candidate.test_run_count,
                 'avg_score', v_candidate.avg_score,
                 'vs_current_delta', v_candidate.vs_current_delta
             )
