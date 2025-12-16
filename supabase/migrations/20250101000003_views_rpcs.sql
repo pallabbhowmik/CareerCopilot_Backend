@@ -77,16 +77,22 @@ SELECT
     sg.job_id,
     jd.title AS job_title,
     jd.company AS company_name,
-    sg.skill_id,
-    s.name AS skill_name,
-    s.category AS skill_category,
-    sg.proficiency_level_required,
-    sg.proficiency_level_current,
-    sg.identified_at,
-    (sg.proficiency_level_required - COALESCE(sg.proficiency_level_current, 0)) AS gap_severity,
-    s.is_technical AS is_technical_skill
+    sg.required_skill_id AS skill_id,
+    s.skill_name,
+    s.skill_category,
+    sg.has_skill,
+    sg.priority_level,
+    sg.roi_score,
+    sg.created_at AS identified_at,
+    CASE 
+        WHEN sg.has_skill THEN 0
+        WHEN sg.priority_level = 'critical' THEN 4
+        WHEN sg.priority_level = 'high' THEN 3
+        WHEN sg.priority_level = 'medium' THEN 2
+        ELSE 1
+    END AS gap_severity
 FROM skill_gaps sg
-JOIN skills s ON sg.skill_id = s.id
+JOIN skills s ON sg.required_skill_id = s.id
 JOIN job_descriptions jd ON sg.job_id = jd.id
 WHERE jd.deleted_at IS NULL;
 
@@ -145,13 +151,14 @@ BEGIN
                 jsonb_build_object(
                     'skill_name', sg.skill_name,
                     'gap_severity', sg.gap_severity,
-                    'proficiency_required', sg.proficiency_level_required
+                    'priority_level', sg.priority_level,
+                    'has_skill', sg.has_skill
                 )
             )
             FROM user_skill_gaps sg
             WHERE sg.user_id = p_user_id 
               AND sg.job_id = p_job_id
-              AND sg.gap_severity > 0
+              AND sg.has_skill = false
         ) AS missing_skills,
         (
             SELECT jsonb_agg(
