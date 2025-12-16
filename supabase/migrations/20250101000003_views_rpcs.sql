@@ -324,32 +324,32 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION get_promotable_prompt_candidates()
 RETURNS TABLE(
     candidate_id UUID,
-    skill_name TEXT,
-    new_system_prompt TEXT,
-    new_user_prompt_template TEXT,
-    test_run_count INTEGER,
-    avg_score NUMERIC,
-    vs_current_delta NUMERIC,
+    candidate_name TEXT,
+    system_prompt TEXT,
+    user_prompt_template TEXT,
+    num_evaluations INTEGER,
+    avg_score FLOAT,
+    improvement_over_parent FLOAT,
     created_at TIMESTAMPTZ
 ) AS $$
 BEGIN
     RETURN QUERY
     SELECT 
         pc.id,
-        pc.skill_name,
-        pc.new_system_prompt,
-        pc.new_user_prompt_template,
-        pc.test_run_count,
+        pc.candidate_name,
+        pc.system_prompt,
+        pc.user_prompt_template,
+        pc.num_evaluations,
         pc.avg_score,
-        pc.vs_current_delta,
+        pc.improvement_over_parent,
         pc.created_at
     FROM prompt_candidates pc
-    WHERE pc.status = 'validated'
-      AND pc.test_run_count >= 100
+    WHERE pc.evaluation_status = 'approved'
+      AND pc.num_evaluations >= 100
       AND pc.avg_score > 0.75
-      AND pc.vs_current_delta > 0.05
+      AND pc.improvement_over_parent > 0.05
       AND pc.created_at > NOW() - INTERVAL '30 days'
-    ORDER BY pc.vs_current_delta DESC;
+    ORDER BY pc.improvement_over_parent DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -365,36 +365,39 @@ CREATE OR REPLACE FUNCTION promote_prompt_to_production(
 RETURNS UUID AS $$
 DECLARE
     v_candidate RECORD;
-    v_current_prompt_id UUID;
+    v_parent_prompt RECORD;
     v_new_prompt_id UUID;
     v_new_version INTEGER;
 BEGIN
     SELECT * INTO v_candidate
     FROM prompt_candidates
     WHERE id = p_candidate_id
-      AND status = 'validated';
+      AND evaluation_status = 'approved';
     
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Candidate not found or not validated';
+        RAISE EXCEPTION 'Candidate not found or not approved';
     END IF;
     
-    SELECT id INTO v_current_prompt_id
+    SELECT * INTO v_parent_prompt
     FROM ai_prompts
-    WHERE skill_name = v_candidate.skill_name
-      AND status = 'production'
-    ORDER BY prompt_version DESC
-    LIMIT 1;
+    WHERE id = v_candidate.parent_prompt_id;
     
-    IF v_current_prompt_id IS NOT NULL THEN
-        UPDATE ai_prompts
-        SET status = 'retired', retired_at = NOW()
-        WHERE id = v_current_prompt_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Parent prompt not found';
     END IF;
     
+    -- Retire current production prompt
+    UPDATE ai_prompts
+    SET status = 'retired', retired_at = NOW()
+    WHERE id = v_candidate.parent_prompt_id
+      AND status = 'production';
+    
+    -- Get next version number for this skill
     SELECT COALESCE(MAX(prompt_version), 0) + 1 INTO v_new_version
     FROM ai_prompts
-    WHERE skill_name = v_candidate.skill_name;
+    WHERE skill_name = v_parent_prompt.skill_name;
     
+    -- Create new production prompt from candidate
     INSERT INTO ai_prompts (
         skill_name,
         prompt_name,
@@ -410,30 +413,29 @@ BEGIN
         promoted_at,
         parent_prompt_id,
         created_by
-    )
-    SELECT 
-        v_candidate.skill_name,
-        v_candidate.skill_name || '_v' || v_new_version,
+    ) VALUES (
+        v_parent_prompt.skill_name,
+        v_parent_prompt.skill_name || '_v' || v_new_version,
         v_new_version,
-        v_candidate.new_system_prompt,
-        v_candidate.new_user_prompt_template,
-        model_name,
-        model_provider,
-        temperature,
-        max_tokens,
-        output_schema,
+        v_candidate.system_prompt,
+        v_candidate.user_prompt_template,
+        v_parent_prompt.model_name,
+        v_parent_prompt.model_provider,
+        v_parent_prompt.temperature,
+        v_parent_prompt.max_tokens,
+        v_parent_prompt.output_schema,
         'production',
         NOW(),
-        v_current_prompt_id,
+        v_candidate.parent_prompt_id,
         p_admin_user_id
-    FROM ai_prompts
-    WHERE id = v_current_prompt_id
+    )
     RETURNING id INTO v_new_prompt_id;
     
+    -- Mark candidate as successfully promoted
     UPDATE prompt_candidates
     SET 
-        status = 'deployed',
-        deployed_prompt_id = v_new_prompt_id,
+        approved_by = p_admin_user_id,
+        approved_at = NOW(),
         updated_at = NOW()
     WHERE id = p_candidate_id;
     
@@ -447,5 +449,5 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE INDEX idx_ai_requests_user_date ON ai_requests(user_id, created_at DESC);
 CREATE INDEX idx_ai_requests_created_skill ON ai_requests(created_at, skill_name);
-CREATE INDEX idx_prompt_candidates_status_score ON prompt_candidates(status, avg_score) 
-WHERE status = 'validated';
+CREATE INDEX idx_prompt_candidates_status_score ON prompt_candidates(evaluation_status, avg_score) 
+WHERE evaluation_status = 'approved';
