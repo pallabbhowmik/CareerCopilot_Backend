@@ -1,6 +1,7 @@
 -- =====================================================
 -- Additional tables needed by FastAPI models
 -- These support the resume, analysis, and template features
+-- Note: These are separate from the UUID-based AI platform tables
 -- =====================================================
 
 -- Templates table
@@ -48,8 +49,8 @@ CREATE TABLE IF NOT EXISTS job_descriptions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Analysis table
-CREATE TABLE IF NOT EXISTS analysis (
+-- Analysis table (renamed to avoid conflicts)
+CREATE TABLE IF NOT EXISTS analyses (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     resume_id INTEGER REFERENCES resumes(id) ON DELETE CASCADE,
@@ -79,5 +80,5 @@ CREATE TABLE IF NOT EXISTS applications (
 -- Create indexes
 CREATE INDEX idx_resumes_user_id ON resumes(user_id);
 CREATE INDEX idx_job_descriptions_user_id ON job_descriptions(user_id);
-CREATE INDEX idx_analysis_user_id ON analysis(user_id);
+CREATE INDEX idx_analyses_user_id ON analyses(user_id);
 CREATE INDEX idx_applications_user_id ON applications(user_id);
