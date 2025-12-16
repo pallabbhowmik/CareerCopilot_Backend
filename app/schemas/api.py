@@ -4,7 +4,7 @@ API Schemas
 Enhanced Pydantic schemas for request/response validation.
 All responses include explanations - never just scores.
 """
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, Dict, Any, List, Union
 from datetime import datetime
 from enum import Enum
@@ -76,15 +76,8 @@ class ErrorResponse(BaseModel):
 
 class ExplanationSchema(BaseModel):
     """Explanation for any analysis output"""
-    title: str
-    summary: str
-    detail: Optional[str] = None
-    signal: Optional[Dict[str, Any]] = None
-    confidence: Optional[Dict[str, Any]] = None
-    action: Optional[Dict[str, Any]] = None
-
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "title": "Strong Skill Match",
                 "summary": "85% of required skills found on your resume.",
@@ -103,6 +96,14 @@ class ExplanationSchema(BaseModel):
                 }
             }
         }
+    )
+    
+    title: str
+    summary: str
+    detail: Optional[str] = None
+    signal: Optional[Dict[str, Any]] = None
+    confidence: Optional[Dict[str, Any]] = None
+    action: Optional[Dict[str, Any]] = None
 
 
 class CheckResultSchema(BaseModel):
@@ -187,6 +188,8 @@ class ResumeUpdateRequest(BaseModel):
 
 class ResumeResponse(BaseModel):
     """Resume response with metadata"""
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     uuid: str
     title: str
@@ -195,9 +198,6 @@ class ResumeResponse(BaseModel):
     parsing_confidence: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
-
-    class Config:
-        orm_mode = True
 
 
 class ResumeUploadResponse(BaseModel):
@@ -230,6 +230,8 @@ class JobCreateRequest(BaseModel):
 
 class JobResponse(BaseModel):
     """Job description response"""
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     uuid: str
     title: str
@@ -239,9 +241,6 @@ class JobResponse(BaseModel):
     preferred_skills: List[str] = []
     requirements: List[JobRequirementSchema] = []
     created_at: datetime
-
-    class Config:
-        orm_mode = True
 
 
 # =============================================================================
@@ -263,14 +262,8 @@ class ATSEvaluationResponse(BaseModel):
     IMPORTANT: Never includes a single ATS score.
     Only category-level assessments with explanations.
     """
-    readiness_level: ReadinessLevel
-    summary: ExplanationSchema
-    checks: List[ATSCheckResult]
-    primary_issues: List[str] = []
-    recommendations: List[str] = []
-
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "readiness_level": "good",
                 "summary": {
@@ -293,6 +286,13 @@ class ATSEvaluationResponse(BaseModel):
                 "recommendations": ["Consider adding a summary section"]
             }
         }
+    )
+    
+    readiness_level: ReadinessLevel
+    summary: ExplanationSchema
+    checks: List[ATSCheckResult]
+    primary_issues: List[str] = []
+    recommendations: List[str] = []
 
 
 # =============================================================================
@@ -345,14 +345,8 @@ class MatchAnalysisResponse(BaseModel):
     
     NO single match percentage. Only category-level assessments.
     """
-    overall_assessment: ExplanationSchema
-    categories: List[MatchCategorySchema]
-    strengths: List[ExplanationSchema]
-    improvement_areas: List[ExplanationSchema]
-    action_items: List[Dict[str, Any]]
-
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "overall_assessment": {
                     "title": "Good Match with Opportunities",
@@ -376,6 +370,13 @@ class MatchAnalysisResponse(BaseModel):
                 "action_items": []
             }
         }
+    )
+    
+    overall_assessment: ExplanationSchema
+    categories: List[MatchCategorySchema]
+    strengths: List[ExplanationSchema]
+    improvement_areas: List[ExplanationSchema]
+    action_items: List[Dict[str, Any]]
 
 
 # =============================================================================
@@ -433,12 +434,11 @@ class UserCreate(UserBase):
 
 
 class UserResponse(UserBase):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     uuid: str
     created_at: datetime
-    
-    class Config:
-        orm_mode = True
 
 
 class UserStatsResponse(BaseModel):

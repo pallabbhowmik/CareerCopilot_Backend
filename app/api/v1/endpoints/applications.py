@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 from datetime import datetime
 from app.db.session import get_db
@@ -23,6 +23,8 @@ class ApplicationUpdate(BaseModel):
     notes: Optional[str] = None
 
 class ApplicationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     resume_id: int
     company: str
@@ -33,9 +35,6 @@ class ApplicationResponse(BaseModel):
     interview_scheduled: bool
     notes: Optional[str]
     applied_at: datetime
-    
-    class Config:
-        orm_mode = True
 
 @router.post("/", response_model=ApplicationResponse)
 def create_application(

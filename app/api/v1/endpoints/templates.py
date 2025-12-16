@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import json
 import os
 from app.db.session import get_db
@@ -10,6 +10,8 @@ from app.models.all_models import Template
 router = APIRouter()
 
 class TemplateResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     name: str
     slug: Optional[str] = None
@@ -18,9 +20,6 @@ class TemplateResponse(BaseModel):
     is_ats_safe: bool = True
     recommended_for: List[str] = []
     config_json: Optional[Any] = None
-    
-    class Config:
-        orm_mode = True
 
 
 # Helper to load initial templates

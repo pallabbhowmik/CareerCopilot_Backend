@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional
 
 class UserBase(BaseModel):
@@ -22,6 +22,8 @@ class UserUpdate(BaseModel):
     career_goal: Optional[str] = None
 
 class UserInDB(UserBase):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     is_active: bool
     target_role: Optional[str] = None
@@ -29,9 +31,6 @@ class UserInDB(UserBase):
     country: Optional[str] = None
     career_goal: Optional[str] = None
     onboarding_completed: bool
-
-    class Config:
-        orm_mode = True
 
 class Token(BaseModel):
     access_token: str
