@@ -1,12 +1,27 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional, Any
+from pydantic import BaseModel
 import json
 import os
 from app.db.session import get_db
 from app.models.all_models import Template
 
 router = APIRouter()
+
+class TemplateResponse(BaseModel):
+    id: int
+    name: str
+    slug: Optional[str] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+    is_ats_safe: bool = True
+    recommended_for: List[str] = []
+    config_json: Optional[Any] = None
+    
+    class Config:
+        orm_mode = True
+
 
 # Helper to load initial templates
 def load_initial_templates(db: Session):
@@ -23,8 +38,13 @@ def load_initial_templates(db: Session):
                 if not existing:
                     db_template = Template(
                         name=data['name'],
-                        category=data['category'],
+                        slug=data.get('slug', data['name'].lower().replace(' ', '-')),
+                        category=data.get('category', 'General'),
+                        description=data.get('description', ''),
                         config_json=data,
+                        is_ats_safe=data.get('is_ats_safe', True),
+                        is_active=True,
+                        recommended_for=data.get('recommended_for', []),
                         preview_image_url=f"/static/templates/{filename.replace('.json', '.png')}"
                     )
                     db.add(db_template)
@@ -42,3 +62,66 @@ def get_template(template_id: int, db: Session = Depends(get_db)):
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
     return template
+
+class RecommendationRequest(BaseModel):
+    target_role: Optional[str] = None
+    experience_level: Optional[str] = None
+    country: Optional[str] = None
+
+@router.post("/recommend")
+def get_template_recommendations(
+    request: RecommendationRequest,
+    db: Session = Depends(get_db)
+):
+    """Get AI-recommended templates based on user context."""
+    # Load all templates
+    load_initial_templates(db)
+    templates = db.query(Template).filter(Template.is_active == True).all()
+    
+    if not templates:
+        return []
+    
+    # Simple recommendation logic based on role/experience
+    role = (request.target_role or "").lower()
+    experience = (request.experience_level or "").lower()
+    
+    # Score each template
+    scored = []
+    for t in templates:
+        score = 0
+        recommended_for = t.config_json.get("recommended_for", []) if t.config_json else []
+        category = (t.category or "").lower()
+        
+        # Match by category keywords
+        if "software" in role or "developer" in role or "engineer" in role:
+            if "software" in category or "tech" in category:
+                score += 30
+        elif "data" in role or "analyst" in role:
+            if "data" in category:
+                score += 30
+        elif "product" in role or "manager" in role:
+            if "product" in category or "management" in category:
+                score += 30
+        elif "design" in role:
+            if "design" in category:
+                score += 30
+        
+        # Match by experience level
+        if "fresher" in experience or "entry" in experience or "0-2" in experience:
+            if "fresher" in str(recommended_for).lower() or "entry" in str(recommended_for).lower():
+                score += 20
+        elif "senior" in experience or "6+" in experience:
+            if "senior" in str(recommended_for).lower() or "executive" in category:
+                score += 20
+        
+        # ATS-safe templates get a bonus
+        if t.is_ats_safe:
+            score += 10
+        
+        scored.append((t, score))
+    
+    # Sort by score and return top 3
+    scored.sort(key=lambda x: x[1], reverse=True)
+    top_templates = [t for t, _ in scored[:3]]
+    
+    return top_templates

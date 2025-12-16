@@ -91,11 +91,16 @@ class Template(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
+    slug = Column(String, nullable=True)
     category = Column(String) # e.g., "ATS-Safe", "Creative", "Developer"
-    description = Column(Text)
+    description = Column(Text, nullable=True)
     config_json = Column(JSON) # Template configuration
     preview_url = Column(String, nullable=True)
+    preview_image_url = Column(String, nullable=True)
     is_premium = Column(Boolean, default=False)
+    is_ats_safe = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True)
+    recommended_for = Column(JSON, default=list)  # List of role types
     popularity_score = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
