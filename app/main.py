@@ -107,11 +107,11 @@ app = FastAPI(
 # 1. CORS (must be first to handle preflight)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_CONFIG.get("allow_origins", settings.BACKEND_CORS_ORIGINS),
-    allow_credentials=CORS_CONFIG.get("allow_credentials", True),
-    allow_methods=CORS_CONFIG.get("allow_methods", ["*"]),
-    allow_headers=CORS_CONFIG.get("allow_headers", ["*"]),
-    expose_headers=CORS_CONFIG.get("expose_headers", [])
+    allow_origins=settings.BACKEND_CORS_ORIGINS if settings.BACKEND_CORS_ORIGINS else ["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "X-Request-ID"]
 )
 
 # 2. Security headers
