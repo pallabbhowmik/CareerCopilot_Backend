@@ -34,8 +34,8 @@ from app.middleware.observability import (
     logger
 )
 
-# Create tables (for dev purposes - use Alembic in prod)
-Base.metadata.create_all(bind=engine)
+# Note: Tables are managed via Supabase migrations, not SQLAlchemy create_all
+# Base.metadata.create_all(bind=engine)
 
 # Application version
 APP_VERSION = "2.0.0"

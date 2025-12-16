@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if not self.DATABASE_URL:
+            # Default local PostgreSQL connection
             self.DATABASE_URL = f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}/{self.POSTGRES_DB}"
+        # Add SSL mode for Supabase if connecting to supabase.co
+        if "supabase.co" in self.DATABASE_URL and "sslmode" not in self.DATABASE_URL:
+            separator = "&" if "?" in self.DATABASE_URL else "?"
+            self.DATABASE_URL = f"{self.DATABASE_URL}{separator}sslmode=require"
 
 settings = Settings()
