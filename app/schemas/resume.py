@@ -33,7 +33,7 @@ class ResumeInDB(ResumeBase):
     updated_at: Optional[datetime] = None
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 class ResumeUploadResponse(BaseModel):
     id: int
