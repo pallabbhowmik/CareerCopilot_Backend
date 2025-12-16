@@ -445,7 +445,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Indexes for View Performance
 -- =====================================================
 
-CREATE INDEX idx_ai_requests_date_skill ON ai_requests(DATE_TRUNC('day', created_at), skill_name);
 CREATE INDEX idx_ai_requests_user_date ON ai_requests(user_id, created_at DESC);
+CREATE INDEX idx_ai_requests_created_skill ON ai_requests(created_at, skill_name);
 CREATE INDEX idx_prompt_candidates_status_score ON prompt_candidates(status, avg_score) 
 WHERE status = 'validated';
