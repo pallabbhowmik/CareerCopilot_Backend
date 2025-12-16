@@ -86,7 +86,7 @@ from .user import (
     UserCreate as UserCreateOld,
     UserInDB,
     Token,
-    TokenData
+    TokenPayload
 )
 
 __all__ = [
@@ -143,5 +143,5 @@ __all__ = [
     "ResumeStructured",
     "UserInDB",
     "Token",
-    "TokenData"
+    "TokenPayload"
 ]
