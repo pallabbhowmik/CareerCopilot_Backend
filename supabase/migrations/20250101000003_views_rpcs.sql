@@ -83,9 +83,7 @@ SELECT
     sg.proficiency_level_required,
     sg.proficiency_level_current,
     sg.identified_at,
-    -- Gap severity: required - current (higher = bigger gap)
     (sg.proficiency_level_required - COALESCE(sg.proficiency_level_current, 0)) AS gap_severity,
-    -- Check if skill is learnable
     s.is_technical AS is_technical_skill
 FROM skill_gaps sg
 JOIN skills s ON sg.skill_id = s.id
@@ -103,20 +101,23 @@ SELECT
     p.skill_name,
     p.prompt_version,
     p.status,
-    -- Aggregate evaluation metrics
-    AVG(e.helpfulness_score) AS avg_helpfulness,
-    AVG(e.safety_score) AS avg_safety,
-    AVG(e.consistency_score) AS avg_consistency,
-    COUNT(DISTINCT e.id) AS evaluation_count,
     COUNT(DISTINCT req.id) AS total_requests,
     AVG(req.latency_ms) AS avg_latency_ms,
     AVG(req.estimated_cost_usd) AS avg_cost_usd,
-    AVG(CASE WHEN resp.validation_passed THEN 1.0 ELSE 0.0 END) AS success_rate,
+    AVG(CASE WHEN resp.schema_valid THEN 1.0 ELSE 0.0 END) AS success_rate,
+    AVG(e.helpfulness_score) AS avg_helpfulness,
+    AVG(e.safety_score) AS avg_safety,
+    COUNT(DISTINCT e.id) AS evaluation_count,
     p.promoted_at
 FROM ai_prompts p
 LEFT JOIN ai_requests req ON req.prompt_id = p.id
 LEFT JOIN ai_responses resp ON resp.request_id = req.id
-GROUP BY p.id, p.skill_name, p.prompt_version, p.status, p.promot
+LEFT JOIN ai_evaluations e ON e.response_id = resp.id
+GROUP BY p.id, p.skill_name, p.prompt_version, p.status, p.promoted_at;
+
+-- =====================================================
+-- RPC: Get User's Active Resume with Job Match
+-- Purpose: Single call to get resume + job analysis
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION get_resume_with_job_match(
@@ -139,7 +140,6 @@ BEGIN
         cr.resume_name,
         cr.version,
         cr.strength_score,
-        -- Missing skills
         (
             SELECT jsonb_agg(
                 jsonb_build_object(
@@ -153,13 +153,11 @@ BEGIN
               AND sg.job_id = p_job_id
               AND sg.gap_severity > 0
         ) AS missing_skills,
-        -- Matched skills
         (
             SELECT jsonb_agg(
                 jsonb_build_object(
                     'skill_name', s.name,
-                    'proficiency', rs.proficiency_level,
-                    'evidence_count', rs.evidence_count
+                    'proficiency', rs.proficiency_level
                 )
             )
             FROM resume_skills rs
@@ -175,14 +173,11 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- =====================================================
 -- RPC: Record AI Request (Used by AI Orchestrator)
--- Purpose: Atomic logging of AI request with validation
+-- Purpose: Atomic logging of AI request
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION record_ai_request(
     p_user_id UUID,
-    p_skill_name TEXT,
-    p_prompt_version TEXT,
-    p_model TEXT,
     p_prompt_id UUID,
     p_skill_name TEXT,
     p_input_data JSONB,
@@ -222,7 +217,10 @@ BEGIN
         COALESCE(p_request_id, gen_random_uuid()::TEXT),
         NOW()
     )
-    RETURNING id INTO v_request_id
+    RETURNING id INTO v_request_id;
+    
+    RETURN v_request_id;
+END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- =====================================================
@@ -232,20 +230,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION record_ai_response(
     p_request_id UUID,
-    p_raw_output TEXT,
-    p_structured_output JSONB,
-    p_validation_passed BOOLEAN,
-    p_validation_errors JSONB,
-    p_confidence_score NUMERIC,
-    p_safety_check_passed BOOLEAN
-)
-RETURNS UUID AS $$
-DECLARE
-    v_response_id UUID;
-BEGIN
-    INSERT INTO ai_responses (
-        request_id,
-        raresponse TEXT,
+    p_raw_response TEXT,
     p_parsed_response JSONB,
     p_schema_valid BOOLEAN,
     p_validation_errors JSONB,
@@ -273,7 +258,20 @@ BEGIN
         p_confidence_score,
         p_contains_unsafe_content
     )
-    RETURNING id INTO v_response_id_job_id UUID
+    RETURNING id INTO v_response_id;
+    
+    RETURN v_response_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =====================================================
+-- RPC: Calculate ATS Score
+-- Purpose: Deterministic scoring based on keywords
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION calculate_ats_score(
+    p_resume_version_id UUID,
+    p_job_id UUID
 )
 RETURNS NUMERIC AS $$
 DECLARE
@@ -282,12 +280,10 @@ DECLARE
     v_matched_skills INTEGER;
     v_keyword_matches INTEGER;
 BEGIN
-    -- Count required skills
     SELECT COUNT(*) INTO v_required_skills
     FROM job_skill_requirements
     WHERE job_id = p_job_id;
     
-    -- Count matched skills
     SELECT COUNT(DISTINCT jsr.skill_id) INTO v_matched_skills
     FROM job_skill_requirements jsr
     JOIN resume_skills rs ON jsr.skill_id = rs.skill_id
@@ -295,22 +291,18 @@ BEGIN
       AND rs.resume_version_id = p_resume_version_id
       AND rs.proficiency_level >= jsr.minimum_proficiency;
     
-    -- Calculate base score from skills (0-70 points)
     IF v_required_skills > 0 THEN
         v_score := (v_matched_skills::NUMERIC / v_required_skills) * 70;
     END IF;
     
-    -- Count keyword matches in resume bullets (0-30 points)
     SELECT COUNT(*) INTO v_keyword_matches
     FROM resume_bullets rb
     JOIN resume_sections rs ON rb.section_id = rs.id
     JOIN job_descriptions jd ON jd.id = p_job_id
     WHERE rs.resume_version_id = p_resume_version_id
-      AND (
-          rb.bullet_text ILIKE '%' || ANY(string_to_array(jd.required_keywords, ',')) || '%'
-      );
+      AND jd.required_keywords IS NOT NULL
+      AND rb.bullet_text ILIKE '%' || ANY(string_to_array(jd.required_keywords, ',')) || '%';
     
-    -- Add keyword score (cap at 30)
     v_score := v_score + LEAST(v_keyword_matches * 5, 30);
     
     RETURN LEAST(v_score, 100);
@@ -318,28 +310,15 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =====================================================
--- RPC: Get Prompt Candidates Ready for Production
--- Purpose: Filter candidates that meet promotion criteria
+-- RPC: Get Promotable Prompt Candidates
+-- Purpose: Filter candidates ready for production
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION get_promotable_prompt_candidates()
 RETURNS TABLE(
     candidate_id UUID,
     skill_name TEXT,
-    new_prompt_text TEXT,
-    test_run_count INTEGER,
-    avg_score NUMERIC,
-    vs_current_delta NUMERIC,
-    created_at TIMESTAMPTZ
-) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        pc.id,
-        pc.skill_name,
-        pc.new_prompt_text,
-        pc.test_run_count,
-        system_prompt TEXT,
+    new_system_prompt TEXT,
     new_user_prompt_template TEXT,
     test_run_count INTEGER,
     avg_score NUMERIC,
@@ -352,10 +331,23 @@ BEGIN
         pc.id,
         pc.skill_name,
         pc.new_system_prompt,
-        pc.new_user_prompt_templateTY DEFINER;
+        pc.new_user_prompt_template,
+        pc.test_run_count,
+        pc.avg_score,
+        pc.vs_current_delta,
+        pc.created_at
+    FROM prompt_candidates pc
+    WHERE pc.status = 'validated'
+      AND pc.test_run_count >= 100
+      AND pc.avg_score > 0.75
+      AND pc.vs_current_delta > 0.05
+      AND pc.created_at > NOW() - INTERVAL '30 days'
+    ORDER BY pc.vs_current_delta DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- =====================================================
--- RPC: Promote Prompt Candidate to Production
+-- RPC: Promote Prompt to Production
 -- Purpose: Safe promotion with rollback support
 -- =====================================================
 
@@ -370,7 +362,6 @@ DECLARE
     v_new_prompt_id UUID;
     v_new_version INTEGER;
 BEGIN
-    -- Get candidate details
     SELECT * INTO v_candidate
     FROM prompt_candidates
     WHERE id = p_candidate_id
@@ -380,23 +371,23 @@ BEGIN
         RAISE EXCEPTION 'Candidate not found or not validated';
     END IF;
     
-    -- Get current production prompt
     SELECT id INTO v_current_prompt_id
     FROM ai_prompts
     WHERE skill_name = v_candidate.skill_name
       AND status = 'production'
-    ORDER BY version DESC
+    ORDER BY prompt_version DESC
     LIMIT 1;
     
-    -- Retire current prompt
     IF v_current_prompt_id IS NOT NULL THEN
         UPDATE ai_prompts
-        SET status = 'retired'
-        WHERE id = v_curprompt_version), 0) + 1 INTO v_new_version
+        SET status = 'retired', retired_at = NOW()
+        WHERE id = v_current_prompt_id;
+    END IF;
+    
+    SELECT COALESCE(MAX(prompt_version), 0) + 1 INTO v_new_version
     FROM ai_prompts
     WHERE skill_name = v_candidate.skill_name;
     
-    -- Create new production prompt
     INSERT INTO ai_prompts (
         skill_name,
         prompt_name,
@@ -427,16 +418,11 @@ BEGIN
         'production',
         NOW(),
         v_current_prompt_id,
-        p_admin_user_id       'test_run_count', v_candidate.test_run_count,
-                'avg_score', v_candidate.avg_score,
-                'vs_current_delta', v_candidate.vs_current_delta
-            )
-        )
+        p_admin_user_id
     FROM ai_prompts
     WHERE id = v_current_prompt_id
     RETURNING id INTO v_new_prompt_id;
     
-    -- Mark candidate as deployed
     UPDATE prompt_candidates
     SET 
         status = 'deployed',
@@ -452,13 +438,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Indexes for View Performance
 -- =====================================================
 
--- ai_requests aggregations
 CREATE INDEX idx_ai_requests_date_skill ON ai_requests(DATE_TRUNC('day', created_at), skill_name);
 CREATE INDEX idx_ai_requests_user_date ON ai_requests(user_id, created_at DESC);
-
--- ai_evaluations lookups
 CREATE INDEX idx_ai_evaluations_response ON ai_evaluations(response_id);
-
--- prompt_candidates filtering
 CREATE INDEX idx_prompt_candidates_status_score ON prompt_candidates(status, avg_score) 
 WHERE status = 'validated';
