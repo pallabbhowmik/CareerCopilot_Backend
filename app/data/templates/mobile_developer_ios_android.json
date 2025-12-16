@@ -1,0 +1,41 @@
+{
+  "id": "mobile_developer_ios_android",
+  "name": "Mobile App Developer",
+  "category": "Developer",
+  "target_roles": ["iOS Developer", "Android Developer", "Mobile Engineer", "React Native Developer"],
+  "experience_levels": ["Mid", "Senior"],
+  "ats_optimized": true,
+  "layout": {
+    "columns": 1,
+    "margins": {"top": 0.75, "bottom": 0.75, "left": 0.75, "right": 0.75},
+    "spacing": {"section_gap": 12, "subsection_gap": 8, "line_height": 1.15}
+  },
+  "fonts": {
+    "primary": {
+      "family": "Arial",
+      "sizes": {"name": 24, "section_header": 12, "subsection_header": 11, "body": 10},
+      "weights": {"name": "bold", "section_header": "bold", "subsection_header": "bold", "body": "normal"}
+    }
+  },
+  "sections": {
+    "order": ["personal_info", "technical_skills", "experience", "projects", "education"],
+    "personal_info": {"layout": "centered", "fields": ["name", "email", "phone", "github", "portfolio"]},
+    "technical_skills": {
+      "label": "Technical Skills",
+      "format": "categorized",
+      "categories": ["Languages", "Frameworks", "Tools & Platforms", "Other"]
+    },
+    "experience": {
+      "label": "Professional Experience",
+      "date_format": "MMM YYYY",
+      "bullet_style": "disc",
+      "highlight_keywords": ["iOS", "Android", "Swift", "Kotlin", "React Native", "Flutter", "mobile", "app", "SDK"]
+    },
+    "projects": {"label": "Published Apps & Projects", "show_tech_stack": true, "show_links": true},
+    "education": {"label": "Education", "show_gpa": "if_above_3.5"}
+  },
+  "styling": {
+    "colors": {"primary": "#000000", "secondary": "#333333", "accent": "#000000"},
+    "section_separator": {"type": "line", "thickness": 1, "color": "#000000"}
+  }
+}

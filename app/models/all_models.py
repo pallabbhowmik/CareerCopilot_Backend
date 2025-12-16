@@ -85,3 +85,42 @@ class Analysis(Base):
     owner = relationship("User", back_populates="analyses")
     resume = relationship("Resume", back_populates="analyses")
     job_description = relationship("JobDescription", back_populates="analyses")
+
+class Template(Base):
+    __tablename__ = "templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    category = Column(String) # e.g., "ATS-Safe", "Creative", "Developer"
+    description = Column(Text)
+    config_json = Column(JSON) # Template configuration
+    preview_url = Column(String, nullable=True)
+    is_premium = Column(Boolean, default=False)
+    popularity_score = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    resumes = relationship("Resume", back_populates="template")
+
+class Application(Base):
+    __tablename__ = "applications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    resume_id = Column(Integer, ForeignKey("resumes.id"))
+    
+    company = Column(String)
+    job_title = Column(String)
+    job_url = Column(String, nullable=True)
+    status = Column(String, default="applied") # applied, interview, rejected, offer
+    applied_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Outcome tracking
+    response_received = Column(Boolean, default=False)
+    interview_scheduled = Column(Boolean, default=False)
+    notes = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    owner = relationship("User", back_populates="applications")
+    resume = relationship("Resume", back_populates="applications")

@@ -1,0 +1,38 @@
+{
+  "id": "project_manager_agile",
+  "name": "Agile Project Manager",
+  "category": "Project Management",
+  "target_roles": ["Project Manager", "Scrum Master", "Program Manager", "Agile Coach"],
+  "experience_levels": ["Mid", "Senior"],
+  "ats_optimized": true,
+  "layout": {
+    "columns": 1,
+    "margins": {"top": 0.75, "bottom": 0.75, "left": 0.75, "right": 0.75},
+    "spacing": {"section_gap": 12, "subsection_gap": 8, "line_height": 1.15}
+  },
+  "fonts": {
+    "primary": {
+      "family": "Arial",
+      "sizes": {"name": 24, "section_header": 12, "subsection_header": 11, "body": 10},
+      "weights": {"name": "bold", "section_header": "bold", "subsection_header": "bold", "body": "normal"}
+    }
+  },
+  "sections": {
+    "order": ["personal_info", "certifications", "summary", "experience", "skills", "education"],
+    "personal_info": {"layout": "centered", "fields": ["name", "email", "phone", "linkedin"]},
+    "certifications": {"label": "Certifications", "format": "inline"},
+    "summary": {"label": "Professional Summary", "max_lines": 3},
+    "experience": {
+      "label": "Professional Experience",
+      "date_format": "MMM YYYY",
+      "bullet_style": "disc",
+      "highlight_keywords": ["agile", "scrum", "project", "delivery", "stakeholder", "team", "planning", "sprint", "JIRA"]
+    },
+    "skills": {"label": "Core Competencies", "format": "categorized", "categories": ["Methodologies", "Tools", "Leadership"]},
+    "education": {"label": "Education", "show_gpa": false}
+  },
+  "styling": {
+    "colors": {"primary": "#000000", "secondary": "#333333", "accent": "#000000"},
+    "section_separator": {"type": "line", "thickness": 1, "color": "#000000"}
+  }
+}

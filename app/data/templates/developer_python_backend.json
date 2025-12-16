@@ -1,0 +1,78 @@
+{
+  "id": "developer_python_backend",
+  "name": "Python Backend Developer",
+  "category": "Developer",
+  "target_roles": ["Backend Engineer", "Python Developer", "Software Engineer"],
+  "experience_levels": ["Mid", "Senior"],
+  "ats_optimized": true,
+  "layout": {
+    "columns": 1,
+    "margins": {
+      "top": 0.75,
+      "bottom": 0.75,
+      "left": 0.75,
+      "right": 0.75
+    },
+    "spacing": {
+      "section_gap": 12,
+      "subsection_gap": 8,
+      "line_height": 1.15
+    }
+  },
+  "fonts": {
+    "primary": {
+      "family": "Arial",
+      "sizes": {
+        "name": 24,
+        "section_header": 12,
+        "subsection_header": 11,
+        "body": 10
+      },
+      "weights": {
+        "name": "bold",
+        "section_header": "bold",
+        "subsection_header": "bold",
+        "body": "normal"
+      }
+    }
+  },
+  "sections": {
+    "order": ["personal_info", "technical_skills", "experience", "projects", "education"],
+    "personal_info": {
+      "layout": "centered",
+      "fields": ["name", "email", "phone", "linkedin", "github", "location"]
+    },
+    "technical_skills": {
+      "label": "Technical Skills",
+      "format": "categorized",
+      "categories": ["Languages", "Frameworks", "Databases", "Tools", "Cloud"]
+    },
+    "experience": {
+      "label": "Professional Experience",
+      "date_format": "MMM YYYY",
+      "bullet_style": "disc",
+      "highlight_keywords": ["Python", "Django", "FastAPI", "PostgreSQL", "AWS", "Docker", "API", "microservices"]
+    },
+    "projects": {
+      "label": "Key Projects",
+      "show_tech_stack": true,
+      "bullet_style": "disc"
+    },
+    "education": {
+      "label": "Education",
+      "show_gpa": "if_above_3.5"
+    }
+  },
+  "styling": {
+    "colors": {
+      "primary": "#000000",
+      "secondary": "#333333",
+      "accent": "#000000"
+    },
+    "section_separator": {
+      "type": "line",
+      "thickness": 1,
+      "color": "#000000"
+    }
+  }
+}

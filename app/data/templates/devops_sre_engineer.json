@@ -1,0 +1,41 @@
+{
+  "id": "devops_sre_engineer",
+  "name": "DevOps & SRE Engineer",
+  "category": "DevOps",
+  "target_roles": ["DevOps Engineer", "SRE", "Cloud Engineer", "Infrastructure Engineer"],
+  "experience_levels": ["Mid", "Senior"],
+  "ats_optimized": true,
+  "layout": {
+    "columns": 1,
+    "margins": {"top": 0.75, "bottom": 0.75, "left": 0.75, "right": 0.75},
+    "spacing": {"section_gap": 12, "subsection_gap": 8, "line_height": 1.15}
+  },
+  "fonts": {
+    "primary": {
+      "family": "Arial",
+      "sizes": {"name": 24, "section_header": 12, "subsection_header": 11, "body": 10},
+      "weights": {"name": "bold", "section_header": "bold", "subsection_header": "bold", "body": "normal"}
+    }
+  },
+  "sections": {
+    "order": ["personal_info", "technical_skills", "experience", "certifications", "education"],
+    "personal_info": {"layout": "centered", "fields": ["name", "email", "phone", "linkedin", "github"]},
+    "technical_skills": {
+      "label": "Technical Skills",
+      "format": "categorized",
+      "categories": ["Cloud Platforms", "Container & Orchestration", "CI/CD", "Monitoring", "Infrastructure as Code", "Languages"]
+    },
+    "experience": {
+      "label": "Professional Experience",
+      "date_format": "MMM YYYY",
+      "bullet_style": "disc",
+      "highlight_keywords": ["AWS", "Azure", "GCP", "Kubernetes", "Docker", "Terraform", "CI/CD", "monitoring", "automation", "infrastructure"]
+    },
+    "certifications": {"label": "Certifications", "format": "list"},
+    "education": {"label": "Education", "show_gpa": false}
+  },
+  "styling": {
+    "colors": {"primary": "#000000", "secondary": "#333333", "accent": "#000000"},
+    "section_separator": {"type": "line", "thickness": 1, "color": "#000000"}
+  }
+}

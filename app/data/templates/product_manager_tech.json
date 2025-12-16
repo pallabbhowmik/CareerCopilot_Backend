@@ -1,0 +1,37 @@
+{
+  "id": "product_manager_tech",
+  "name": "Technical Product Manager",
+  "category": "Product Management",
+  "target_roles": ["Product Manager", "Senior PM", "Technical PM"],
+  "experience_levels": ["Mid", "Senior"],
+  "ats_optimized": true,
+  "layout": {
+    "columns": 1,
+    "margins": {"top": 0.75, "bottom": 0.75, "left": 0.75, "right": 0.75},
+    "spacing": {"section_gap": 12, "subsection_gap": 8, "line_height": 1.15}
+  },
+  "fonts": {
+    "primary": {
+      "family": "Georgia",
+      "sizes": {"name": 24, "section_header": 12, "subsection_header": 11, "body": 10},
+      "weights": {"name": "bold", "section_header": "bold", "subsection_header": "bold", "body": "normal"}
+    }
+  },
+  "sections": {
+    "order": ["personal_info", "summary", "experience", "skills", "education"],
+    "personal_info": {"layout": "left_aligned", "fields": ["name", "email", "phone", "linkedin", "location"]},
+    "summary": {"label": "Professional Summary", "max_lines": 4},
+    "experience": {
+      "label": "Product Leadership Experience",
+      "date_format": "MMM YYYY",
+      "bullet_style": "disc",
+      "highlight_keywords": ["product", "roadmap", "stakeholder", "metrics", "launched", "revenue", "growth", "strategy"]
+    },
+    "skills": {"label": "Core Competencies", "format": "categorized", "categories": ["Product", "Technical", "Leadership", "Analytics"]},
+    "education": {"label": "Education", "show_gpa": false}
+  },
+  "styling": {
+    "colors": {"primary": "#000000", "secondary": "#333333", "accent": "#000000"},
+    "section_separator": {"type": "line", "thickness": 1, "color": "#000000"}
+  }
+}

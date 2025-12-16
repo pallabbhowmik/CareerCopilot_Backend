@@ -1,0 +1,82 @@
+{
+  "id": "frontend_react_modern",
+  "name": "Modern Frontend Developer",
+  "category": "Developer",
+  "target_roles": ["Frontend Engineer", "React Developer", "Full Stack Developer"],
+  "experience_levels": ["Fresher", "Mid", "Senior"],
+  "ats_optimized": true,
+  "layout": {
+    "columns": 1,
+    "margins": {
+      "top": 0.75,
+      "bottom": 0.75,
+      "left": 0.75,
+      "right": 0.75
+    },
+    "spacing": {
+      "section_gap": 12,
+      "subsection_gap": 8,
+      "line_height": 1.15
+    }
+  },
+  "fonts": {
+    "primary": {
+      "family": "Calibri",
+      "sizes": {
+        "name": 22,
+        "section_header": 12,
+        "subsection_header": 11,
+        "body": 10
+      },
+      "weights": {
+        "name": "bold",
+        "section_header": "bold",
+        "subsection_header": "bold",
+        "body": "normal"
+      }
+    }
+  },
+  "sections": {
+    "order": ["personal_info", "summary", "skills", "experience", "projects", "education"],
+    "personal_info": {
+      "layout": "left_aligned",
+      "fields": ["name", "email", "phone", "portfolio", "github", "linkedin"]
+    },
+    "summary": {
+      "label": "Professional Summary",
+      "max_lines": 3
+    },
+    "skills": {
+      "label": "Technical Skills",
+      "format": "inline",
+      "separator": " • "
+    },
+    "experience": {
+      "label": "Experience",
+      "date_format": "MMM YYYY",
+      "bullet_style": "disc",
+      "highlight_keywords": ["React", "JavaScript", "TypeScript", "Next.js", "Vue", "CSS", "HTML", "UI/UX"]
+    },
+    "projects": {
+      "label": "Featured Projects",
+      "show_tech_stack": true,
+      "show_links": true
+    },
+    "education": {
+      "label": "Education",
+      "show_gpa": "optional"
+    }
+  },
+  "styling": {
+    "colors": {
+      "primary": "#000000",
+      "secondary": "#444444",
+      "accent": "#0066cc"
+    },
+    "section_separator": {
+      "type": "line",
+      "thickness": 0.5,
+      "color": "#cccccc"
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "id": "cybersecurity_analyst",
+  "name": "Cybersecurity Professional",
+  "category": "Cybersecurity",
+  "target_roles": ["Security Analyst", "Security Engineer", "Penetration Tester", "SOC Analyst"],
+  "experience_levels": ["Mid", "Senior"],
+  "ats_optimized": true,
+  "layout": {
+    "columns": 1,
+    "margins": {"top": 0.75, "bottom": 0.75, "left": 0.75, "right": 0.75},
+    "spacing": {"section_gap": 12, "subsection_gap": 8, "line_height": 1.15}
+  },
+  "fonts": {
+    "primary": {
+      "family": "Arial",
+      "sizes": {"name": 24, "section_header": 12, "subsection_header": 11, "body": 10},
+      "weights": {"name": "bold", "section_header": "bold", "subsection_header": "bold", "body": "normal"}
+    }
+  },
+  "sections": {
+    "order": ["personal_info", "certifications", "technical_skills", "experience", "education"],
+    "personal_info": {"layout": "centered", "fields": ["name", "email", "phone", "linkedin"]},
+    "certifications": {"label": "Security Certifications", "format": "list", "priority": "high"},
+    "technical_skills": {
+      "label": "Technical Skills",
+      "format": "categorized",
+      "categories": ["Security Tools", "Technologies", "Frameworks & Standards", "Languages"]
+    },
+    "experience": {
+      "label": "Professional Experience",
+      "date_format": "MMM YYYY",
+      "bullet_style": "disc",
+      "highlight_keywords": ["security", "penetration", "vulnerability", "SIEM", "firewall", "compliance", "threat", "incident", "risk"]
+    },
+    "education": {"label": "Education", "show_gpa": false}
+  },
+  "styling": {
+    "colors": {"primary": "#000000", "secondary": "#333333", "accent": "#000000"},
+    "section_separator": {"type": "line", "thickness": 1, "color": "#000000"}
+  }
+}

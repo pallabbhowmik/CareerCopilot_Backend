@@ -1,0 +1,38 @@
+{
+  "id": "finance_accounting",
+  "name": "Finance & Accounting Professional",
+  "category": "Finance",
+  "target_roles": ["Financial Analyst", "Accountant", "Finance Manager", "Controller"],
+  "experience_levels": ["Mid", "Senior"],
+  "ats_optimized": true,
+  "layout": {
+    "columns": 1,
+    "margins": {"top": 0.75, "bottom": 0.75, "left": 0.75, "right": 0.75},
+    "spacing": {"section_gap": 12, "subsection_gap": 8, "line_height": 1.15}
+  },
+  "fonts": {
+    "primary": {
+      "family": "Times New Roman",
+      "sizes": {"name": 24, "section_header": 12, "subsection_header": 11, "body": 10},
+      "weights": {"name": "bold", "section_header": "bold", "subsection_header": "bold", "body": "normal"}
+    }
+  },
+  "sections": {
+    "order": ["personal_info", "certifications", "summary", "experience", "education", "skills"],
+    "personal_info": {"layout": "centered", "fields": ["name", "email", "phone", "linkedin", "location"]},
+    "certifications": {"label": "Professional Certifications", "format": "inline"},
+    "summary": {"label": "Professional Summary", "max_lines": 3},
+    "experience": {
+      "label": "Professional Experience",
+      "date_format": "MMM YYYY",
+      "bullet_style": "disc",
+      "highlight_keywords": ["financial", "accounting", "GAAP", "audit", "budget", "forecast", "analysis", "reporting", "compliance"]
+    },
+    "education": {"label": "Education", "show_gpa": "if_above_3.5"},
+    "skills": {"label": "Technical Skills", "format": "inline", "separator": " • "}
+  },
+  "styling": {
+    "colors": {"primary": "#000000", "secondary": "#333333", "accent": "#000000"},
+    "section_separator": {"type": "line", "thickness": 1, "color": "#000000"}
+  }
+}

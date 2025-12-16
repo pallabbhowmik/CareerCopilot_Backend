@@ -1,0 +1,38 @@
+{
+  "id": "hr_recruiter",
+  "name": "HR & Talent Acquisition",
+  "category": "Human Resources",
+  "target_roles": ["HR Manager", "Recruiter", "Talent Acquisition", "HR Business Partner"],
+  "experience_levels": ["Mid", "Senior"],
+  "ats_optimized": true,
+  "layout": {
+    "columns": 1,
+    "margins": {"top": 0.75, "bottom": 0.75, "left": 0.75, "right": 0.75},
+    "spacing": {"section_gap": 12, "subsection_gap": 8, "line_height": 1.2}
+  },
+  "fonts": {
+    "primary": {
+      "family": "Calibri",
+      "sizes": {"name": 22, "section_header": 12, "subsection_header": 11, "body": 10.5},
+      "weights": {"name": "bold", "section_header": "bold", "subsection_header": "bold", "body": "normal"}
+    }
+  },
+  "sections": {
+    "order": ["personal_info", "summary", "experience", "skills", "education", "certifications"],
+    "personal_info": {"layout": "centered", "fields": ["name", "email", "phone", "linkedin"]},
+    "summary": {"label": "Professional Summary", "max_lines": 3},
+    "experience": {
+      "label": "Professional Experience",
+      "date_format": "MMM YYYY",
+      "bullet_style": "disc",
+      "highlight_keywords": ["recruitment", "talent", "hiring", "onboarding", "HRIS", "employee", "engagement", "performance", "policy"]
+    },
+    "skills": {"label": "Core Competencies", "format": "inline", "separator": " | "},
+    "education": {"label": "Education", "show_gpa": false},
+    "certifications": {"label": "Professional Certifications", "format": "list"}
+  },
+  "styling": {
+    "colors": {"primary": "#000000", "secondary": "#444444", "accent": "#0066cc"},
+    "section_separator": {"type": "line", "thickness": 0.5, "color": "#cccccc"}
+  }
+}

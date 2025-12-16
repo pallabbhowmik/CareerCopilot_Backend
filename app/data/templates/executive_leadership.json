@@ -1,0 +1,37 @@
+{
+  "id": "executive_leadership",
+  "name": "Executive Leadership",
+  "category": "Executive",
+  "target_roles": ["Director", "VP", "C-Level", "Senior Executive"],
+  "experience_levels": ["Senior", "Executive"],
+  "ats_optimized": true,
+  "layout": {
+    "columns": 1,
+    "margins": {"top": 0.8, "bottom": 0.8, "left": 0.8, "right": 0.8},
+    "spacing": {"section_gap": 14, "subsection_gap": 9, "line_height": 1.2}
+  },
+  "fonts": {
+    "primary": {
+      "family": "Times New Roman",
+      "sizes": {"name": 26, "section_header": 13, "subsection_header": 11.5, "body": 10.5},
+      "weights": {"name": "bold", "section_header": "bold", "subsection_header": "bold", "body": "normal"}
+    }
+  },
+  "sections": {
+    "order": ["personal_info", "executive_summary", "experience", "education", "board_positions"],
+    "personal_info": {"layout": "centered", "fields": ["name", "email", "phone", "linkedin", "location"]},
+    "executive_summary": {"label": "Executive Profile", "max_lines": 5},
+    "experience": {
+      "label": "Leadership Experience",
+      "date_format": "YYYY",
+      "bullet_style": "disc",
+      "highlight_keywords": ["led", "established", "transformed", "P&L", "revenue", "growth", "strategy", "board", "stakeholder"]
+    },
+    "education": {"label": "Education & Executive Development", "show_gpa": false},
+    "board_positions": {"label": "Board Positions & Advisory Roles", "format": "list"}
+  },
+  "styling": {
+    "colors": {"primary": "#000000", "secondary": "#333333", "accent": "#000000"},
+    "section_separator": {"type": "line", "thickness": 1.5, "color": "#000000"}
+  }
+}
