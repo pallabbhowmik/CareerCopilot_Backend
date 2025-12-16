@@ -1,11 +1,25 @@
 -- =====================================================
 -- Additional tables needed by FastAPI models
 -- These support the resume, analysis, and template features
--- Note: These are separate from the UUID-based AI platform tables
+-- Note: Drop conflicting UUID tables first, then create INTEGER-based ones
 -- =====================================================
 
+-- Drop existing UUID-based tables that conflict
+DROP TABLE IF EXISTS analyses CASCADE;
+DROP TABLE IF EXISTS applications CASCADE;
+DROP TABLE IF EXISTS skill_gaps CASCADE;
+DROP TABLE IF EXISTS resume_skills CASCADE;
+DROP TABLE IF EXISTS job_skill_requirements CASCADE;
+DROP TABLE IF EXISTS resume_bullets CASCADE;
+DROP TABLE IF EXISTS resume_sections CASCADE;
+DROP TABLE IF EXISTS resume_versions CASCADE;
+DROP TABLE IF EXISTS resumes CASCADE;
+DROP TABLE IF EXISTS job_descriptions CASCADE;
+DROP TABLE IF EXISTS skills CASCADE;
+DROP TABLE IF EXISTS templates CASCADE;
+
 -- Templates table
-CREATE TABLE IF NOT EXISTS templates (
+CREATE TABLE templates (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     category VARCHAR(100),
@@ -17,7 +31,7 @@ CREATE TABLE IF NOT EXISTS templates (
 );
 
 -- Resumes table  
-CREATE TABLE IF NOT EXISTS resumes (
+CREATE TABLE resumes (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     template_id INTEGER REFERENCES templates(id),
@@ -37,7 +51,7 @@ CREATE TABLE IF NOT EXISTS resumes (
 );
 
 -- Job descriptions table
-CREATE TABLE IF NOT EXISTS job_descriptions (
+CREATE TABLE job_descriptions (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(255),
@@ -49,8 +63,8 @@ CREATE TABLE IF NOT EXISTS job_descriptions (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Analysis table (renamed to avoid conflicts)
-CREATE TABLE IF NOT EXISTS analyses (
+-- Analyses table
+CREATE TABLE analyses (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     resume_id INTEGER REFERENCES resumes(id) ON DELETE CASCADE,
@@ -62,7 +76,7 @@ CREATE TABLE IF NOT EXISTS analyses (
 );
 
 -- Applications table
-CREATE TABLE IF NOT EXISTS applications (
+CREATE TABLE applications (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     resume_id INTEGER REFERENCES resumes(id),
