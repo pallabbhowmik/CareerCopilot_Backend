@@ -13,7 +13,7 @@ CREATE MATERIALIZED VIEW current_resumes AS
 SELECT 
     r.id AS resume_id,
     r.user_id,
-    r.name AS resume_name,
+    r.title AS resume_name,
     rv.id AS version_id,
     rv.version_number,
     rv.created_at AS version_created_at,

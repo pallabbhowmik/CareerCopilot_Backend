@@ -11,17 +11,20 @@
 
 INSERT INTO ai_prompts (
     skill_name,
-    version,
-    prompt_text,
-    model,
+    prompt_name,
+    prompt_version,
+    system_prompt,
+    user_prompt_template,
+    model_name,
     temperature,
-    expected_output_schema,
+    output_schema,
     status,
-    deployed_at,
-    metadata
+    promoted_at
 ) VALUES (
     'improve_bullet',
+    'improve_bullet_v1',
     1,
+    'You are an expert resume writer. Improve bullet points while preserving core facts and truthfulness.',
     'Improve this resume bullet point while preserving the core facts.
 
 Original Bullet:
@@ -40,19 +43,19 @@ Guidelines:
 6. Improve clarity and impact
 
 Return JSON:
-{{
+{
     "improved_text": "<improved bullet point>",
     "explanation": "<why this is better>",
     "signals_used": [<list of signals from original>],
     "changes_made": [
-        {{
+        {
             "type": "<action_verb|metric|structure|clarity>",
             "description": "<what changed>"
-        }}
+        }
     ],
     "confidence": <0.0-1.0>,
     "preserves_facts": <true|false>
-}}',
+}',
     'gpt-4',
     0.7,
     '{
@@ -68,13 +71,7 @@ Return JSON:
         }
     }'::jsonb,
     'production',
-    NOW(),
-    '{
-        "description": "Improves single bullet point with explanation",
-        "max_tokens": 1000,
-        "typical_cost": 0.03,
-        "typical_latency_ms": 2000
-    }'::jsonb
+    NOW()
 );
 
 -- =====================================================
@@ -84,17 +81,20 @@ Return JSON:
 
 INSERT INTO ai_prompts (
     skill_name,
-    version,
-    prompt_text,
-    model,
+    prompt_name,
+    prompt_version,
+    system_prompt,
+    user_prompt_template,
+    model_name,
     temperature,
-    expected_output_schema,
+    output_schema,
     status,
-    deployed_at,
-    metadata
+    promoted_at
 ) VALUES (
     'explain_bullet_strength',
+    'explain_bullet_strength_v1',
     1,
+    'You are an expert resume analyst. Explain bullet point quality based on deterministic signals in user-friendly language.',
     'Explain why this resume bullet point is effective or needs improvement.
 
 Bullet Point:
@@ -104,19 +104,19 @@ Deterministic Signals Detected:
 {signals}
 
 Provide user-friendly explanation in JSON:
-{{
+{
     "strength_level": "<strong|moderate|weak>",
     "explanation": "<why it is strong or weak>",
     "key_strengths": [<list of good elements>],
     "improvement_areas": [<list of what could be better>],
     "signals_explained": [
-        {{
+        {
             "signal": "<signal name>",
             "meaning": "<what this signal indicates>",
             "impact": "<positive|neutral|negative>"
-        }}
+        }
     ]
-}}',
+}',
     'gpt-4',
     0.3,
     '{
@@ -131,13 +131,7 @@ Provide user-friendly explanation in JSON:
         }
     }'::jsonb,
     'production',
-    NOW(),
-    '{
-        "description": "Explains bullet point quality based on signals",
-        "max_tokens": 800,
-        "typical_cost": 0.025,
-        "typical_latency_ms": 1800
-    }'::jsonb
+    NOW()
 );
 
 -- =====================================================
@@ -147,17 +141,20 @@ Provide user-friendly explanation in JSON:
 
 INSERT INTO ai_prompts (
     skill_name,
-    version,
-    prompt_text,
-    model,
+    prompt_name,
+    prompt_version,
+    system_prompt,
+    user_prompt_template,
+    model_name,
     temperature,
-    expected_output_schema,
+    output_schema,
     status,
-    deployed_at,
-    metadata
+    promoted_at
 ) VALUES (
     'summarize_section_quality',
+    'summarize_section_quality_v1',
     1,
+    'You are a helpful resume coach. Translate deterministic quality scores into encouraging, actionable feedback.',
     'Translate this deterministic quality score into user-friendly language.
 
 Section Type: {section_type}
@@ -165,11 +162,11 @@ Deterministic Score: {deterministic_score}/100
 Detected Signals: {signals}
 
 Provide concise summary (max 2 sentences) in JSON:
-{{
+{
     "summary": "<plain language summary>",
     "top_issue": "<main thing to fix, if any>",
     "tone": "<encouraging|neutral|constructive>"
-}}
+}
 
 Guidelines:
 - Be encouraging but honest
@@ -188,13 +185,7 @@ Guidelines:
         }
     }'::jsonb,
     'production',
-    NOW(),
-    '{
-        "description": "Summarizes deterministic scores for heatmap",
-        "max_tokens": 400,
-        "typical_cost": 0.015,
-        "typical_latency_ms": 1200
-    }'::jsonb
+    NOW()
 );
 
 -- =====================================================
@@ -204,17 +195,20 @@ Guidelines:
 
 INSERT INTO ai_prompts (
     skill_name,
-    version,
-    prompt_text,
-    model,
+    prompt_name,
+    prompt_version,
+    system_prompt,
+    user_prompt_template,
+    model_name,
     temperature,
-    expected_output_schema,
+    output_schema,
     status,
-    deployed_at,
-    metadata
+    promoted_at
 ) VALUES (
     'recommend_template',
+    'recommend_template_v1',
     1,
+    'You are a resume design expert. Recommend templates based on role, experience level, and regional preferences.',
     'Recommend the best resume templates for this user.
 
 User Profile:
@@ -226,16 +220,16 @@ Available Templates:
 {available_templates}
 
 Select top 3 templates and explain why in JSON:
-{{
+{
     "top_3": [
-        {{
+        {
             "template_id": "<template id>",
             "reason": "<why this fits>",
             "suitability_score": <0-100>
-        }}
+        }
     ],
     "reasoning": "<overall recommendation strategy>"
-}}
+}
 
 Consider:
 - Industry norms for the role
@@ -258,13 +252,7 @@ Consider:
         }
     }'::jsonb,
     'production',
-    NOW(),
-    '{
-        "description": "Recommends templates based on user profile",
-        "max_tokens": 1200,
-        "typical_cost": 0.035,
-        "typical_latency_ms": 2200
-    }'::jsonb
+    NOW()
 );
 
 -- =====================================================
@@ -274,17 +262,20 @@ Consider:
 
 INSERT INTO ai_prompts (
     skill_name,
-    version,
-    prompt_text,
-    model,
+    prompt_name,
+    prompt_version,
+    system_prompt,
+    user_prompt_template,
+    model_name,
     temperature,
-    expected_output_schema,
+    output_schema,
     status,
-    deployed_at,
-    metadata
+    promoted_at
 ) VALUES (
     'explain_ats_risk',
+    'explain_ats_risk_v1',
     1,
+    'You are an ATS (Applicant Tracking System) expert. Explain compatibility issues in plain language with concrete fix suggestions.',
     'Explain this ATS compatibility check result to the user.
 
 Check Name: {check_name}
@@ -292,13 +283,13 @@ Result: {result}
 Context: {context}
 
 Provide clear explanation and fix suggestion in JSON:
-{{
+{
     "explanation": "<what this check means>",
     "why_it_matters": "<impact on ATS parsing>",
     "fix_suggestion": "<how to fix it>",
     "urgency": "<critical|important|nice-to-have>",
     "example": "<concrete example if helpful>"
-}}
+}
 
 Guidelines:
 - Use plain language (avoid technical jargon)
@@ -319,13 +310,7 @@ Guidelines:
         }
     }'::jsonb,
     'production',
-    NOW(),
-    '{
-        "description": "Explains ATS check results with fix suggestions",
-        "max_tokens": 1000,
-        "typical_cost": 0.03,
-        "typical_latency_ms": 1800
-    }'::jsonb
+    NOW()
 );
 
 -- =====================================================
@@ -335,17 +320,20 @@ Guidelines:
 
 INSERT INTO ai_prompts (
     skill_name,
-    version,
-    prompt_text,
-    model,
+    prompt_name,
+    prompt_version,
+    system_prompt,
+    user_prompt_template,
+    model_name,
     temperature,
-    expected_output_schema,
+    output_schema,
     status,
-    deployed_at,
-    metadata
+    promoted_at
 ) VALUES (
     'explain_skill_gaps',
+    'explain_skill_gaps_v1',
     1,
+    'You are a career advisor. Provide honest, encouraging assessment of skill gaps with concrete action plans.',
     'Analyze skill gaps between resume and job description.
 
 Job Description:
@@ -358,22 +346,22 @@ Identified Gaps (deterministic):
 {identified_gaps}
 
 Provide reasoning and prioritization in JSON:
-{{
+{
     "gap_analysis": [
-        {{
+        {
             "skill": "<skill name>",
             "importance": "<critical|important|nice-to-have>",
             "why_it_matters": "<explanation>",
             "how_to_address": "<concrete suggestions>",
             "timeline": "<immediate|short-term|long-term>"
-        }}
+        }
     ],
     "prioritized_actions": [
         "<ordered list of what to do first>"
     ],
     "overall_assessment": "<honest assessment of fit>",
     "encouragement": "<balanced, realistic encouragement>"
-}}
+}
 
 Guidelines:
 - Be honest but encouraging
@@ -394,13 +382,7 @@ Guidelines:
         }
     }'::jsonb,
     'production',
-    NOW(),
-    '{
-        "description": "Explains skill gaps with prioritized actions",
-        "max_tokens": 2000,
-        "typical_cost": 0.06,
-        "typical_latency_ms": 3500
-    }'::jsonb
+    NOW()
 );
 
 -- =====================================================
@@ -410,17 +392,20 @@ Guidelines:
 
 INSERT INTO ai_prompts (
     skill_name,
-    version,
-    prompt_text,
-    model,
+    prompt_name,
+    prompt_version,
+    system_prompt,
+    user_prompt_template,
+    model_name,
     temperature,
-    expected_output_schema,
+    output_schema,
     status,
-    deployed_at,
-    metadata
+    promoted_at
 ) VALUES (
     'career_advisor',
+    'career_advisor_v1',
     1,
+    'You are a calm, professional career advisor. Provide helpful guidance based on user context with strict guardrails: no guarantees, no predictions, always link to specific context, suggest concrete actions.',
     'You are a calm, professional career advisor. Answer the user''s question based on their context.
 
 User Question:
@@ -433,18 +418,18 @@ Skill Gaps: {skill_gaps}
 Market Data: {market_context}
 
 Provide helpful response in JSON:
-{{
+{
     "response_text": "<your response>",
     "action_items": [
-        {{
+        {
             "action": "<specific thing to do>",
             "why": "<why it helps>",
             "priority": "<high|medium|low>"
-        }}
+        }
     ],
     "sources": [<if you reference specific data>],
     "follow_up_questions": [<2-3 suggested follow-ups>]
-}}
+}
 
 STRICT GUIDELINES:
 - Be calm and professional
@@ -467,19 +452,9 @@ STRICT GUIDELINES:
         }
     }'::jsonb,
     'production',
-    NOW(),
-    '{
-        "description": "Career copilot chat with strong guardrails",
-        "max_tokens": 2500,
-        "typical_cost": 0.08,
-        "typical_latency_ms": 4000
-    }'::jsonb
+    NOW()
 );
 
--- =====================================================
--- Update indexes for new skills
--- =====================================================
-
--- Already covered by existing indexes, but verify
-SELECT COUNT(*) FROM ai_prompts WHERE status = 'production';
--- Should return 12 prompts (5 original + 7 new)
+-- Verify all prompts loaded
+SELECT COUNT(*) as total_prompts FROM ai_prompts WHERE status = 'production';
+-- Should return 12 (5 from 000004 + 7 from 000005)

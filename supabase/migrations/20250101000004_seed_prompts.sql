@@ -11,17 +11,20 @@
 
 INSERT INTO ai_prompts (
     skill_name,
-    version,
-    prompt_text,
-    model,
+    prompt_name,
+    prompt_version,
+    system_prompt,
+    user_prompt_template,
+    model_name,
     temperature,
-    expected_output_schema,
+    output_schema,
     status,
-    deployed_at,
-    metadata
+    promoted_at
 ) VALUES (
     'analyze_resume',
+    'analyze_resume_v1',
     1,
+    'You are an expert resume analyzer. Provide detailed, actionable feedback on resume quality, ATS compatibility, and improvement areas.',
     'Analyze the following resume and provide detailed feedback.
 
 Resume:
@@ -31,103 +34,93 @@ Target Job (if provided):
 {job_description}
 
 Provide your analysis in JSON format with the following structure:
-{{
+{
     "overall_score": <number 0-100>,
     "strengths": [<list of strengths>],
     "weaknesses": [<list of weaknesses>],
     "missing_keywords": [<list of keywords not found>],
     "ats_compatibility": <number 0-100>,
     "recommendations": [
-        {{
+        {
             "category": "<category>",
             "priority": "<high/medium/low>",
             "suggestion": "<specific suggestion>",
             "rationale": "<why this matters>"
-        }}
+        }
     ],
     "skill_gaps": [
-        {{
+        {
             "skill": "<skill name>",
             "importance": "<critical/important/nice-to-have>",
-            "suggested_action": "<how to address>"
-        }}
+            "found_in_resume": <boolean>
+        }
     ]
-}}',
+}',
     'gpt-4',
     0.3,
     '{
         "type": "object",
-        "required": ["overall_score", "strengths", "weaknesses", "recommendations"],
+        "required": ["overall_score", "strengths", "weaknesses", "ats_compatibility"],
         "properties": {
             "overall_score": {"type": "number", "minimum": 0, "maximum": 100},
-            "strengths": {"type": "array", "items": {"type": "string"}},
-            "weaknesses": {"type": "array", "items": {"type": "string"}},
-            "missing_keywords": {"type": "array", "items": {"type": "string"}},
+            "strengths": {"type": "array"},
+            "weaknesses": {"type": "array"},
+            "missing_keywords": {"type": "array"},
             "ats_compatibility": {"type": "number", "minimum": 0, "maximum": 100},
             "recommendations": {"type": "array"},
             "skill_gaps": {"type": "array"}
         }
     }'::jsonb,
     'production',
-    NOW(),
-    '{
-        "description": "Analyzes resume and provides actionable feedback",
-        "max_tokens": 2000,
-        "typical_cost": 0.06,
-        "typical_latency_ms": 3000
-    }'::jsonb
+    NOW()
 );
 
 -- =====================================================
 -- SKILL: generate_bullets
--- Purpose: Generate STAR-format bullet points
+-- Purpose: Generate resume bullet points
 -- =====================================================
 
 INSERT INTO ai_prompts (
     skill_name,
-    version,
-    prompt_text,
-    model,
+    prompt_name,
+    prompt_version,
+    system_prompt,
+    user_prompt_template,
+    model_name,
     temperature,
-    expected_output_schema,
+    output_schema,
     status,
-    deployed_at,
-    metadata
+    promoted_at
 ) VALUES (
     'generate_bullets',
+    'generate_bullets_v1',
     1,
-    'Generate 3-5 compelling resume bullet points for the following work experience.
+    'You are a professional resume writer specializing in achievement-oriented bullet points using the STAR method.',
+    'Generate {count} resume bullet points for the following job experience.
 
 Job Title: {job_title}
 Company: {company}
-Description: {experience_description}
+Key Responsibilities: {responsibilities}
+Achievements: {achievements}
 
 Guidelines:
-1. Use STAR format (Situation, Task, Action, Result)
-2. Start with strong action verbs
-3. Include quantifiable results when possible
-4. Use power words that pass ATS systems
-5. Keep each bullet to 1-2 lines
-6. Focus on achievements, not responsibilities
+- Use strong action verbs
+- Include quantifiable results when possible
+- Follow STAR format (Situation, Task, Action, Result)
+- Be specific and achievement-focused
+- Keep each bullet to 1-2 lines
 
-Return JSON format:
-{{
+Return JSON:
+{
     "bullets": [
-        {{
-            "text": "<bullet point>",
-            "action_verb": "<verb used>",
-            "has_metric": <true/false>,
-            "ats_keywords": [<list of keywords>],
-            "star_elements": {{
-                "situation": "<brief context>",
-                "task": "<what needed to be done>",
-                "action": "<what you did>",
-                "result": "<impact/outcome>"
-            }}
-        }}
-    ],
-    "suggested_skills": [<skills demonstrated in these bullets>]
-}}',
+        {
+            "text": "<bullet point text>",
+            "action_verb": "<primary action verb used>",
+            "has_metric": <boolean>,
+            "confidence": <0.0-1.0>
+        }
+    ]
+}',
     'gpt-4',
     0.7,
     '{
@@ -136,284 +129,221 @@ Return JSON format:
         "properties": {
             "bullets": {
                 "type": "array",
-                "minItems": 3,
-                "maxItems": 5,
                 "items": {
                     "type": "object",
-                    "required": ["text", "action_verb", "has_metric"],
+                    "required": ["text", "action_verb", "has_metric", "confidence"],
                     "properties": {
-                        "text": {"type": "string"},
+                        "text": {"type": "string", "maxLength": 200},
                         "action_verb": {"type": "string"},
                         "has_metric": {"type": "boolean"},
-                        "ats_keywords": {"type": "array"},
-                        "star_elements": {"type": "object"}
+                        "confidence": {"type": "number", "minimum": 0, "maximum": 1}
                     }
                 }
-            },
-            "suggested_skills": {"type": "array"}
+            }
         }
     }'::jsonb,
     'production',
-    NOW(),
-    '{
-        "description": "Generates STAR-format resume bullets",
-        "max_tokens": 1500,
-        "typical_cost": 0.04,
-        "typical_latency_ms": 2500
-    }'::jsonb
+    NOW()
 );
 
 -- =====================================================
 -- SKILL: extract_skills
--- Purpose: Extract and categorize skills from resume
+-- Purpose: Extract skills from resume text
 -- =====================================================
 
 INSERT INTO ai_prompts (
     skill_name,
-    version,
-    prompt_text,
-    model,
+    prompt_name,
+    prompt_version,
+    system_prompt,
+    user_prompt_template,
+    model_name,
     temperature,
-    expected_output_schema,
+    output_schema,
     status,
-    deployed_at,
-    metadata
+    promoted_at
 ) VALUES (
     'extract_skills',
+    'extract_skills_v1',
     1,
-    'Extract all skills from the following resume and categorize them.
+    'You are an expert at identifying and categorizing professional skills from resume text.',
+    'Extract all technical and soft skills from this resume text.
 
-Resume:
+Resume Text:
 {resume_text}
 
 Categorize skills into:
-- technical_skills: Programming languages, frameworks, tools
-- soft_skills: Communication, leadership, problem-solving
-- domain_skills: Industry-specific knowledge
-- certifications: Professional certifications
+- Technical Skills (programming languages, tools, platforms)
+- Soft Skills (communication, leadership, etc.)
+- Domain Skills (industry-specific knowledge)
 
-For each skill, estimate proficiency level based on context:
-1 = Beginner/Mentioned
-2 = Intermediate/Used
-3 = Advanced/Led projects
-4 = Expert/Taught others
-
-Return JSON format:
-{{
+Return JSON:
+{
     "technical_skills": [
-        {{
-            "name": "<skill>",
-            "category": "<languages/frameworks/tools/databases>",
-            "proficiency_level": <1-4>,
-            "evidence": "<where mentioned in resume>",
-            "years_experience": <estimated years or null>
-        }}
+        {
+            "skill": "<skill name>",
+            "proficiency": "<expert/advanced/intermediate/beginner>",
+            "evidence": "<where found in resume>"
+        }
     ],
     "soft_skills": [
-        {{
-            "name": "<skill>",
-            "proficiency_level": <1-4>,
-            "evidence": "<context from resume>"
-        }}
+        {
+            "skill": "<skill name>",
+            "evidence": "<where demonstrated>"
+        }
     ],
     "domain_skills": [
-        {{
-            "name": "<skill>",
-            "industry": "<industry>",
-            "proficiency_level": <1-4>
-        }}
-    ],
-    "certifications": [
-        {{
-            "name": "<certification>",
-            "issuer": "<issuing organization>",
-            "year": <year or null>
-        }}
+        {
+            "skill": "<skill name>",
+            "evidence": "<where demonstrated>"
+        }
     ]
-}}',
+}',
     'gpt-4',
     0.2,
     '{
         "type": "object",
-        "required": ["technical_skills", "soft_skills"],
+        "required": ["technical_skills", "soft_skills", "domain_skills"],
         "properties": {
             "technical_skills": {"type": "array"},
             "soft_skills": {"type": "array"},
-            "domain_skills": {"type": "array"},
-            "certifications": {"type": "array"}
+            "domain_skills": {"type": "array"}
         }
     }'::jsonb,
     'production',
-    NOW(),
-    '{
-        "description": "Extracts and categorizes skills from resume text",
-        "max_tokens": 2000,
-        "typical_cost": 0.05,
-        "typical_latency_ms": 3500
-    }'::jsonb
+    NOW()
 );
 
 -- =====================================================
 -- SKILL: match_job
--- Purpose: Calculate job-resume match score
+-- Purpose: Match resume to job description
 -- =====================================================
 
 INSERT INTO ai_prompts (
     skill_name,
-    version,
-    prompt_text,
-    model,
+    prompt_name,
+    prompt_version,
+    system_prompt,
+    user_prompt_template,
+    model_name,
     temperature,
-    expected_output_schema,
+    output_schema,
     status,
-    deployed_at,
-    metadata
+    promoted_at
 ) VALUES (
     'match_job',
+    'match_job_v1',
     1,
+    'You are a recruiting expert analyzing candidate-job fit based on resume content and job requirements.',
     'Analyze how well this resume matches the job description.
 
-Resume:
-{resume_text}
+Resume Skills:
+{resume_skills}
 
 Job Description:
 {job_description}
 
 Provide detailed matching analysis in JSON:
-{{
-    "match_score": <0-100>,
-    "matched_requirements": [
-        {{
-            "requirement": "<from job description>",
-            "evidence": "<from resume>",
-            "strength": "<strong/moderate/weak>"
-        }}
+{
+    "overall_match": <0-100>,
+    "matched_skills": [
+        {
+            "skill": "<skill name>",
+            "required": <boolean>,
+            "proficiency_match": "<excellent/good/partial/missing>"
+        }
     ],
-    "missing_requirements": [
-        {{
-            "requirement": "<from job description>",
-            "criticality": "<must-have/nice-to-have>",
-            "gap_size": "<large/medium/small>",
-            "suggested_action": "<how to address>"
-        }}
+    "missing_skills": [
+        {
+            "skill": "<skill name>",
+            "importance": "<critical/important/nice-to-have>",
+            "can_learn_quickly": <boolean>
+        }
     ],
-    "matched_keywords": [<list of matching keywords>],
-    "missing_keywords": [<list of important missing keywords>],
-    "role_fit_assessment": "<detailed paragraph>",
-    "interview_talking_points": [
-        "<points to emphasize in interview>"
-    ],
-    "resume_modifications": [
-        {{
-            "section": "<which section>",
-            "modification": "<what to change>",
-            "reason": "<why it helps>"
-        }}
-    ]
-}}',
+    "recommendation": "<apply/maybe/not_recommended>",
+    "reasoning": "<explanation of match assessment>"
+}',
     'gpt-4',
-    0.3,
+    0.4,
     '{
         "type": "object",
-        "required": ["match_score", "matched_requirements", "missing_requirements"],
+        "required": ["overall_match", "matched_skills", "missing_skills", "recommendation"],
         "properties": {
-            "match_score": {"type": "number", "minimum": 0, "maximum": 100},
-            "matched_requirements": {"type": "array"},
-            "missing_requirements": {"type": "array"},
-            "matched_keywords": {"type": "array"},
-            "missing_keywords": {"type": "array"},
-            "role_fit_assessment": {"type": "string"},
-            "interview_talking_points": {"type": "array"},
-            "resume_modifications": {"type": "array"}
+            "overall_match": {"type": "number", "minimum": 0, "maximum": 100},
+            "matched_skills": {"type": "array"},
+            "missing_skills": {"type": "array"},
+            "recommendation": {"type": "string", "enum": ["apply", "maybe", "not_recommended"]},
+            "reasoning": {"type": "string"}
         }
     }'::jsonb,
     'production',
-    NOW(),
-    '{
-        "description": "Calculates job-resume match with detailed analysis",
-        "max_tokens": 2500,
-        "typical_cost": 0.08,
-        "typical_latency_ms": 4000
-    }'::jsonb
+    NOW()
 );
 
 -- =====================================================
 -- SKILL: optimize_summary
--- Purpose: Generate optimized resume summary
+-- Purpose: Optimize professional summary
 -- =====================================================
 
 INSERT INTO ai_prompts (
     skill_name,
-    version,
-    prompt_text,
-    model,
+    prompt_name,
+    prompt_version,
+    system_prompt,
+    user_prompt_template,
+    model_name,
     temperature,
-    expected_output_schema,
+    output_schema,
     status,
-    deployed_at,
-    metadata
+    promoted_at
 ) VALUES (
     'optimize_summary',
+    'optimize_summary_v1',
     1,
-    'Generate a compelling resume summary based on the following information.
+    'You are an expert resume writer specializing in compelling professional summaries that highlight unique value propositions.',
+    'Optimize this professional summary for maximum impact.
 
-Resume:
-{resume_text}
+Current Summary:
+{current_summary}
 
-Target Job (optional):
-{job_description}
+Target Role: {target_role}
+Experience Level: {experience_level}
+Key Strengths: {key_strengths}
 
-Guidelines:
-1. 3-4 sentences maximum
-2. Highlight top 3 value propositions
-3. Include years of experience
-4. Mention key technical skills
-5. Add one quantifiable achievement
-6. Use industry-specific keywords
-7. Write in third person
+Create an optimized summary (3-4 sentences) that:
+- Opens with a strong positioning statement
+- Highlights unique value proposition
+- Includes key achievements or metrics
+- Aligns with target role
+- Uses powerful but authentic language
 
 Return JSON:
-{{
-    "summary": "<optimized summary text>",
-    "key_value_props": [<3 main value propositions>],
-    "keywords_included": [<ATS keywords used>],
-    "alternative_versions": [
-        {{
-            "version": "<slightly different phrasing>",
-            "tone": "<professional/enthusiastic/technical>"
-        }}
-    ]
-}}',
+{
+    "optimized_summary": "<improved summary text>",
+    "improvements_made": [
+        {
+            "type": "<structure|language|metrics|positioning>",
+            "description": "<what was improved>"
+        }
+    ],
+    "key_phrases": [<phrases that strengthen the summary>],
+    "confidence": <0.0-1.0>
+}',
     'gpt-4',
     0.6,
     '{
         "type": "object",
-        "required": ["summary", "key_value_props"],
+        "required": ["optimized_summary", "improvements_made", "confidence"],
         "properties": {
-            "summary": {"type": "string", "maxLength": 500},
-            "key_value_props": {"type": "array", "minItems": 3, "maxItems": 3},
-            "keywords_included": {"type": "array"},
-            "alternative_versions": {"type": "array"}
+            "optimized_summary": {"type": "string", "maxLength": 500},
+            "improvements_made": {"type": "array"},
+            "key_phrases": {"type": "array"},
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1}
         }
     }'::jsonb,
     'production',
-    NOW(),
-    '{
-        "description": "Generates optimized resume summary",
-        "max_tokens": 1000,
-        "typical_cost": 0.03,
-        "typical_latency_ms": 2000
-    }'::jsonb
+    NOW()
 );
 
--- =====================================================
--- Create indexes for prompt lookup performance
--- =====================================================
-
-CREATE INDEX IF NOT EXISTS idx_prompts_skill_status 
-    ON ai_prompts(skill_name, status) 
-    WHERE status = 'production';
-
-CREATE INDEX IF NOT EXISTS idx_prompts_performance 
-    ON ai_prompts(skill_name, success_rate DESC, avg_latency_ms ASC) 
-    WHERE status = 'production';
+-- Verify seeded prompts
+SELECT COUNT(*) as seed_prompt_count FROM ai_prompts WHERE status = 'production';
