@@ -1,0 +1,29 @@
+{
+  "id": "developer-minimal",
+  "name": "Developer Minimal",
+  "category": "Developer",
+  "target_roles": ["Software Developer", "Frontend Engineer", "Backend Engineer", "Full Stack Developer"],
+  "description": "Clean, code-focused layout. Prioritizes projects and technical skills.",
+  "preview_image": "/templates/developer-minimal.png",
+  "ats_score": 98,
+  "layout": {
+    "columns": 1,
+    "page_margins": "0.65in",
+    "font_family": "Helvetica",
+    "font_size_body": "10.5pt",
+    "font_size_name": "18pt",
+    "font_size_section": "12pt",
+    "line_spacing": "1.1",
+    "section_spacing": "10pt",
+    "section_order": ["contact", "summary", "skills", "projects", "experience", "education"]
+  },
+  "styles": {
+    "name_alignment": "left",
+    "name_weight": "bold",
+    "section_header_style": "bold",
+    "section_underline": false,
+    "bullet_style": "–",
+    "date_format": "MMM YYYY",
+    "date_alignment": "right"
+  }
+}

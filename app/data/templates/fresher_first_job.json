@@ -1,0 +1,29 @@
+{
+  "id": "fresher-first-job",
+  "name": "Fresher First Job",
+  "category": "Fresher",
+  "target_roles": ["Entry Level", "Graduate Trainee", "Junior Developer", "Associate"],
+  "description": "Perfect for new graduates. Emphasizes education, projects, and internships.",
+  "preview_image": "/templates/fresher-first-job.png",
+  "ats_score": 100,
+  "layout": {
+    "columns": 1,
+    "page_margins": "0.75in",
+    "font_family": "Calibri",
+    "font_size_body": "11pt",
+    "font_size_name": "22pt",
+    "font_size_section": "13pt",
+    "line_spacing": "1.2",
+    "section_spacing": "14pt",
+    "section_order": ["contact", "education", "skills", "projects", "internships", "certifications", "achievements"]
+  },
+  "styles": {
+    "name_alignment": "center",
+    "name_weight": "bold",
+    "section_header_style": "bold_uppercase",
+    "section_underline": true,
+    "bullet_style": "•",
+    "date_format": "MM/YYYY",
+    "date_alignment": "right"
+  }
+}
