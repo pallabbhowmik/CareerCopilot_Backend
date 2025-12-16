@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     # AI
     OPENAI_API_KEY: Optional[str] = None
 
+    # Supabase (Optional - for Auth/Storage)
+    SUPABASE_URL: Optional[str] = None
+    SUPABASE_KEY: Optional[str] = None
+    SUPABASE_JWT_SECRET: Optional[str] = None
+
     class Config:
         case_sensitive = True
         env_file = ".env"
