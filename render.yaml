@@ -2,8 +2,6 @@ services:
   - type: web
     name: careercopilot-backend
     runtime: python
-    python:
-      version: "3.11.11"
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
     envVars:
