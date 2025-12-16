@@ -6,7 +6,7 @@ from app.core.security import create_access_token, verify_password, get_password
 from app.core.config import settings
 from app.models.all_models import User
 from app.schemas.user import UserCreate, Token, UserInDB, UserLogin, UserUpdate
-from jose import JWTError, jwt
+import jwt
 from typing import Optional
 from datetime import timedelta
 
@@ -28,7 +28,7 @@ def get_current_user(
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-    except JWTError:
+    except jwt.InvalidTokenError:
         raise credentials_exception
     
     user = db.query(User).filter(User.id == int(user_id)).first()
