@@ -16,7 +16,6 @@ class ResumeUpdate(BaseModel):
     template_id: Optional[int] = None
 
 class ResumeInDB(ResumeBase):
-    model_config = ConfigDict(from_attributes=True)
     
     id: int
     user_id: int
@@ -33,6 +32,8 @@ class ResumeInDB(ResumeBase):
     file_path: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 class ResumeUploadResponse(BaseModel):
     id: int

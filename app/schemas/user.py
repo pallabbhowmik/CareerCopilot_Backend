@@ -22,8 +22,6 @@ class UserUpdate(BaseModel):
     career_goal: Optional[str] = None
 
 class UserInDB(UserBase):
-    model_config = ConfigDict(from_attributes=True)
-    
     id: int
     is_active: bool
     target_role: Optional[str] = None
@@ -31,6 +29,8 @@ class UserInDB(UserBase):
     country: Optional[str] = None
     career_goal: Optional[str] = None
     onboarding_completed: bool
+
+    model_config = ConfigDict(from_attributes=True)
 
 class Token(BaseModel):
     access_token: str

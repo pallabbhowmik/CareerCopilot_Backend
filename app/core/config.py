@@ -2,13 +2,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional, List
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        case_sensitive=True,
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
-    )
-    
     PROJECT_NAME: str = "CareerCopilot AI"
     API_V1_STR: str = "/api/v1"
     
@@ -34,6 +27,8 @@ class Settings(BaseSettings):
     SUPABASE_URL: Optional[str] = None
     SUPABASE_KEY: Optional[str] = None
     SUPABASE_JWT_SECRET: Optional[str] = None
+
+    model_config = SettingsConfigDict(case_sensitive=True, env_file=".env")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
