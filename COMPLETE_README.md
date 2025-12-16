@@ -51,8 +51,11 @@ EOF
 # Run database migrations (tables auto-create on startup)
 # For production, use Alembic
 
-# Start server
+# Start development server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Start production server (used by Render)
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 ### Frontend Setup
