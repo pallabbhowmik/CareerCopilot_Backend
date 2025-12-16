@@ -1,0 +1,19 @@
+{
+    "id": "ats-standard-v1",
+    "name": "ATS Standard",
+    "category": "ATS-Friendly",
+    "description": "A clean, single-column layout optimized for parsing algorithms.",
+    "layout": {
+        "columns": 1,
+        "margins": "1in",
+        "font_family": "Arial, sans-serif",
+        "font_size_body": "11pt",
+        "font_size_header": "14pt",
+        "section_order": ["contact", "summary", "skills", "experience", "education", "projects"]
+    },
+    "styles": {
+        "header_alignment": "left",
+        "bullet_style": "circle",
+        "date_format": "MM/YYYY"
+    }
+}

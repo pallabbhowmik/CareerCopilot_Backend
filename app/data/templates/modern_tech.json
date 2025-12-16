@@ -1,0 +1,20 @@
+{
+    "id": "modern-tech-v1",
+    "name": "Modern Tech",
+    "category": "Creative",
+    "description": "A two-column layout popular with startups and tech companies.",
+    "layout": {
+        "columns": 2,
+        "sidebar_sections": ["contact", "skills", "education"],
+        "main_sections": ["summary", "experience", "projects"],
+        "margins": "0.75in",
+        "font_family": "Roboto, sans-serif",
+        "font_size_body": "10pt",
+        "font_size_header": "16pt"
+    },
+    "styles": {
+        "header_alignment": "center",
+        "accent_color": "#3B82F6",
+        "date_format": "MMM YYYY"
+    }
+}
