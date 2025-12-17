@@ -33,7 +33,13 @@ async def upload_resume(
     try:
         parsed_data = await parse_resume_file(file)
     except ValueError as e:
+        print(f"ValueError in parse_resume_file: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        print(f"Unexpected error in parse_resume_file: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=400, detail=f"Error processing resume: {str(e)}")
     
     # Save file
     file_path = f"{UPLOAD_DIR}/{current_user.id}_{file.filename}"
