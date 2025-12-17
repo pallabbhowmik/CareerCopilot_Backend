@@ -163,6 +163,30 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         content={"detail": exc.detail},
         headers=cors_headers
     )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle request validation errors with CORS headers"""
+    request_id = getattr(request.state, "request_id", None)
+    
+    cors_headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
+    if request_id:
+        cors_headers["X-Request-ID"] = request_id
+    
+    # Log validation errors for debugging
+    print(f"Validation error: {exc.errors()}")
+    
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
+        headers=cors_headers
+    )
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler with structured logging"""
