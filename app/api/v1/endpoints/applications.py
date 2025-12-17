@@ -3,14 +3,15 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 from datetime import datetime
+from uuid import UUID
 from app.db.session import get_db
-from app.models.all_models import Application, User
+from app.models.all_models import Application, UserProfile
 from app.api.v1.endpoints.auth import get_current_user
 
 router = APIRouter()
 
 class ApplicationCreate(BaseModel):
-    resume_id: int
+    resume_id: UUID
     company: str
     job_title: str
     job_url: Optional[str] = None
@@ -25,8 +26,8 @@ class ApplicationUpdate(BaseModel):
 class ApplicationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
-    id: int
-    resume_id: int
+    id: UUID
+    resume_id: Optional[UUID]
     company: str
     job_title: str
     job_url: Optional[str]
@@ -40,11 +41,11 @@ class ApplicationResponse(BaseModel):
 def create_application(
     app_data: ApplicationCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user)
 ):
     """Track a new job application."""
     db_app = Application(
-        user_id=current_user.id,
+        user_id=current_user.user_id,
         resume_id=app_data.resume_id,
         company=app_data.company,
         job_title=app_data.job_title,
@@ -60,11 +61,11 @@ def create_application(
 @router.get("/", response_model=List[ApplicationResponse])
 def get_applications(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: UserProfile = Depends(get_current_user),
     status: Optional[str] = None
 ):
     """Get all job applications for the current user."""
-    query = db.query(Application).filter(Application.user_id == current_user.id)
+    query = db.query(Application).filter(Application.user_id == current_user.user_id)
     
     if status:
         query = query.filter(Application.status == status)
@@ -73,14 +74,14 @@ def get_applications(
 
 @router.get("/{application_id}", response_model=ApplicationResponse)
 def get_application(
-    application_id: int,
+    application_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user)
 ):
     """Get a specific application."""
     app = db.query(Application).filter(
         Application.id == application_id,
-        Application.user_id == current_user.id
+        Application.user_id == current_user.user_id
     ).first()
     
     if not app:
@@ -90,15 +91,15 @@ def get_application(
 
 @router.put("/{application_id}", response_model=ApplicationResponse)
 def update_application(
-    application_id: int,
+    application_id: UUID,
     app_update: ApplicationUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user)
 ):
     """Update an application status."""
     app = db.query(Application).filter(
         Application.id == application_id,
-        Application.user_id == current_user.id
+        Application.user_id == current_user.user_id
     ).first()
     
     if not app:
@@ -114,10 +115,10 @@ def update_application(
 @router.get("/stats/summary")
 def get_application_stats(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user)
 ):
     """Get application statistics."""
-    apps = db.query(Application).filter(Application.user_id == current_user.id).all()
+    apps = db.query(Application).filter(Application.user_id == current_user.user_id).all()
     
     total = len(apps)
     by_status = {}

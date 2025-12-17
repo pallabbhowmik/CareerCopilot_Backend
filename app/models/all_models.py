@@ -23,6 +23,8 @@ class UserProfile(Base):
     deleted_at = Column(DateTime(timezone=True))
 
     resumes = relationship("Resume", back_populates="owner")
+    applications = relationship("Application", back_populates="owner")
+    analyses = relationship("Analysis", back_populates="owner")
 
 class Resume(Base):
     __tablename__ = "resumes"
@@ -30,7 +32,7 @@ class Resume(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("user_profiles.user_id"), nullable=False)
     title = Column(String, nullable=False)
-    template_id = Column(UUID(as_uuid=True), nullable=True)
+    template_id = Column(UUID(as_uuid=True), ForeignKey("templates.id"), nullable=True)
     
     current_version_id = Column(UUID(as_uuid=True), nullable=True)
     variant_group_id = Column(UUID(as_uuid=True), nullable=True)
@@ -41,6 +43,9 @@ class Resume(Base):
     deleted_at = Column(DateTime(timezone=True))
 
     owner = relationship("UserProfile", back_populates="resumes")
+    template = relationship("Template", back_populates="resumes")
+    applications = relationship("Application", back_populates="resume")
+    analyses = relationship("Analysis", back_populates="resume")
 
 class JobDescription(Base):
     __tablename__ = "job_descriptions"
@@ -62,22 +67,54 @@ class JobDescription(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     deleted_at = Column(DateTime(timezone=True))
 
-# Placeholder for other models if needed
+    analyses = relationship("Analysis", back_populates="job_description")
 
+class Template(Base):
+    __tablename__ = "templates"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, unique=True, index=True)
+    slug = Column(String, nullable=True)
+    category = Column(String) # e.g., "ATS-Safe", "Creative", "Developer"
+    description = Column(Text, nullable=True)
+    config_json = Column(JSON) # Template configuration
+    preview_url = Column(String, nullable=True)
+    preview_image_url = Column(String, nullable=True)
+    is_premium = Column(Boolean, default=False)
     is_ats_safe = Column(Boolean, default=True)
     is_active = Column(Boolean, default=True)
     recommended_for = Column(JSON, default=list)  # List of role types
     popularity_score = Column(Integer, default=0)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     resumes = relationship("Resume", back_populates="template")
+
+class Analysis(Base):
+    __tablename__ = "analyses"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("user_profiles.user_id"), nullable=False)
+    resume_id = Column(UUID(as_uuid=True), ForeignKey("resumes.id"), nullable=True)
+    job_description_id = Column(UUID(as_uuid=True), ForeignKey("job_descriptions.id"), nullable=True)
+    
+    score_data = Column(JSON) # Detailed scoring breakdown
+    gap_analysis = Column(JSON) # Missing skills, etc.
+    recommendations = Column(JSON) # Actionable advice
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    owner = relationship("UserProfile", back_populates="analyses")
+    resume = relationship("Resume", back_populates="analyses")
+    job_description = relationship("JobDescription", back_populates="analyses")
 
 class Application(Base):
     __tablename__ = "applications"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    resume_id = Column(Integer, ForeignKey("resumes.id"))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("user_profiles.user_id"), nullable=False)
+    resume_id = Column(UUID(as_uuid=True), ForeignKey("resumes.id"), nullable=True)
     
     company = Column(String)
     job_title = Column(String)
@@ -91,7 +128,7 @@ class Application(Base):
     notes = Column(Text, nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    owner = relationship("User", back_populates="applications")
+    owner = relationship("UserProfile", back_populates="applications")
     resume = relationship("Resume", back_populates="applications")

@@ -48,7 +48,7 @@ async def upload_resume(
         raise HTTPException(status_code=400, detail=f"Error processing resume: {str(e)}")
     
     # Save file
-    file_path = f"{UPLOAD_DIR}/{current_user.id}_{file.filename}"
+    file_path = f"{UPLOAD_DIR}/{current_user.user_id}_{file.filename}"
     async with aiofiles.open(file_path, 'wb') as out_file:
         content = await file.read()
         await out_file.write(content)
@@ -58,7 +58,7 @@ async def upload_resume(
     
     # Save to database
     db_resume = Resume(
-        user_id=current_user.id,
+        user_id=current_user.user_id,
         title=file.filename.rsplit('.', 1)[0],
         content_raw=parsed_data.get("raw_text", ""),
         content_structured=parsed_data,
@@ -90,21 +90,21 @@ async def upload_resume(
 @router.get("/", response_model=List[ResumeInDB])
 def get_resumes(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user)
 ):
     """Get all resumes for the current user."""
-    return db.query(Resume).filter(Resume.user_id == current_user.id).all()
+    return db.query(Resume).filter(Resume.user_id == current_user.user_id).all()
 
 @router.get("/{resume_id}", response_model=ResumeInDB)
 def get_resume(
     resume_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user)
 ):
     """Get a specific resume."""
     resume = db.query(Resume).filter(
         Resume.id == resume_id,
-        Resume.user_id == current_user.id
+        Resume.user_id == current_user.user_id
     ).first()
     
     if not resume:
@@ -117,12 +117,12 @@ def update_resume(
     resume_id: int,
     resume_update: ResumeUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user)
 ):
     """Update a resume."""
     resume = db.query(Resume).filter(
         Resume.id == resume_id,
-        Resume.user_id == current_user.id
+        Resume.user_id == current_user.user_id
     ).first()
     
     if not resume:
@@ -146,12 +146,12 @@ def update_resume(
 def delete_resume(
     resume_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user)
 ):
     """Delete a resume."""
     resume = db.query(Resume).filter(
         Resume.id == resume_id,
-        Resume.user_id == current_user.id
+        Resume.user_id == current_user.user_id
     ).first()
     
     if not resume:
@@ -170,12 +170,12 @@ def delete_resume(
 def duplicate_resume(
     resume_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user)
 ):
     """Create a duplicate/variant of an existing resume."""
     original = db.query(Resume).filter(
         Resume.id == resume_id,
-        Resume.user_id == current_user.id
+        Resume.user_id == current_user.user_id
     ).first()
     
     if not original:
@@ -183,7 +183,7 @@ def duplicate_resume(
     
     # Create duplicate
     duplicate = Resume(
-        user_id=current_user.id,
+        user_id=current_user.user_id,
         template_id=original.template_id,
         title=f"{original.title} (Copy)",
         content_raw=original.content_raw,

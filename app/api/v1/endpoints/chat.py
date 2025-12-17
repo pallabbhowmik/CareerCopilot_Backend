@@ -22,10 +22,6 @@ async def career_chat(
     db: Session = Depends(get_db),
     current_user: UserProfile = Depends(get_current_user)
 ):
-    request: ChatRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
     """
     Career Copilot Chat - context-aware career advice.
     """

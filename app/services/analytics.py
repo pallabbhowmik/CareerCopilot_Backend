@@ -1,12 +1,13 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from uuid import UUID
 from app.models.all_models import Application, Resume
 
 class AnalyticsService:
     def __init__(self):
         pass
 
-    def get_user_stats(self, db: Session, user_id: int):
+    def get_user_stats(self, db: Session, user_id: UUID):
         """
         Get application stats for a user.
         """
@@ -21,7 +22,7 @@ class AnalyticsService:
             "conversion_rate": (interviews / total_applications * 100) if total_applications > 0 else 0
         }
 
-    def get_ab_test_results(self, db: Session, user_id: int):
+    def get_ab_test_results(self, db: Session, user_id: UUID):
         """
         Compare performance of different resume variants.
         """

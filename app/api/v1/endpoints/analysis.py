@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Dict, Any, List
+from uuid import UUID
 from app.db.session import get_db
-from app.models.all_models import Resume, JobDescription, Analysis, User
+from app.models.all_models import Resume, JobDescription, Analysis, UserProfile
 from app.api.v1.endpoints.auth import get_current_user
 from app.services.llm_engine import ai_service
 from app.services.ats_explainability import calculate_ats_readiness
@@ -33,12 +34,13 @@ class BulletImproveResponse(BaseModel):
 async def create_job_description(
     job_desc: JobDescriptionCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user)
 ):
     """
     Save a job description for analysis.
     """
     db_job = JobDescription(
+        user_id=current_user.user_id,
         title=job_desc.title,
         company=job_desc.company,
         content_raw=job_desc.content_raw,
@@ -55,7 +57,7 @@ async def compare_resume_job(
     resume_id: int, 
     job_id: int, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user)
 ):
     """
     Compare a resume against a job description.
@@ -64,7 +66,7 @@ async def compare_resume_job(
     # Fetch resume
     resume = db.query(Resume).filter(
         Resume.id == resume_id,
-        Resume.user_id == current_user.id
+        Resume.user_id == current_user.user_id
     ).first()
     
     if not resume:
@@ -89,7 +91,7 @@ async def compare_resume_job(
     
     # Save analysis to database
     db_analysis = Analysis(
-        user_id=current_user.id,
+        user_id=current_user.user_id,
         resume_id=resume_id,
         job_description_id=job_id,
         score_data=match_analysis,
@@ -114,7 +116,7 @@ async def compare_resume_job(
 @router.post("/improve-bullet", response_model=BulletImproveResponse)
 async def improve_bullet_point(
     request: BulletImproveRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user)
 ):
     """
     AI-powered bullet point improvement.
@@ -140,14 +142,14 @@ async def improve_bullet_point(
 async def get_ats_readiness(
     resume_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user)
 ):
     """
     Get detailed ATS readiness analysis for a resume.
     """
     resume = db.query(Resume).filter(
         Resume.id == resume_id,
-        Resume.user_id == current_user.id
+        Resume.user_id == current_user.user_id
     ).first()
     
     if not resume:
@@ -169,13 +171,13 @@ async def get_ats_readiness(
 @router.get("/history")
 async def get_analysis_history(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user)
 ):
     """
     Get user's analysis history.
     """
     analyses = db.query(Analysis).filter(
-        Analysis.user_id == current_user.id
+        Analysis.user_id == current_user.user_id
     ).order_by(Analysis.created_at.desc()).limit(20).all()
     
     return analyses

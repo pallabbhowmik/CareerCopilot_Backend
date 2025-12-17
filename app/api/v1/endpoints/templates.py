@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional, Any
 from pydantic import BaseModel, ConfigDict
+from uuid import UUID
 import json
 import os
 from app.db.session import get_db
@@ -12,7 +13,7 @@ router = APIRouter()
 class TemplateResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
-    id: int
+    id: UUID
     name: str
     slug: Optional[str] = None
     category: Optional[str] = None
@@ -56,7 +57,7 @@ def get_templates(db: Session = Depends(get_db)):
     return db.query(Template).filter(Template.is_active == True).all()
 
 @router.get("/{template_id}")
-def get_template(template_id: int, db: Session = Depends(get_db)):
+def get_template(template_id: UUID, db: Session = Depends(get_db)):
     template = db.query(Template).filter(Template.id == template_id).first()
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
