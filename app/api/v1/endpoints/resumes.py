@@ -31,7 +31,8 @@ async def upload_resume(
     Returns structured data and ATS readiness analysis.
     """
     # Validate file type
-    if not file.filename.endswith(('.pdf', '.docx', '.doc')):
+    filename = (file.filename or "").lower()
+    if not filename.endswith(('.pdf', '.docx', '.doc')):
         raise HTTPException(status_code=400, detail="Only PDF and DOCX files are supported")
     
     # Parse resume

@@ -13,9 +13,15 @@ async def parse_resume_file(file: UploadFile) -> Dict[str, Any]:
     """
     # Extract text from file
     text = ""
-    file_extension = file.filename.split(".")[-1].lower()
+    filename = file.filename or ""
+    file_extension = filename.split(".")[-1].lower() if "." in filename else ""
     
     content = await file.read()
+    # Reset cursor so downstream code can read/save the file again
+    try:
+        await file.seek(0)
+    except Exception:
+        pass
     
     if file_extension == "pdf":
         text = extract_text_from_pdf(content)
