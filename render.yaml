@@ -13,5 +13,3 @@ services:
         generateValue: true
       - key: OPENAI_API_KEY
         sync: false
-      - key: BACKEND_CORS_ORIGINS
-        value: "[\"http://localhost:3000\", \"https://your-frontend-url.vercel.app\"]"
