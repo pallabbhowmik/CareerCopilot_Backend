@@ -43,6 +43,8 @@ Extract:
 7. Certifications: array of strings
 8. Languages: array of strings
 
+For each section (personal_info, summary, skills, experience, education, projects), add a "confidence_score" (0.0 to 1.0) indicating how confident you are that you extracted all information correctly from the text.
+
 Return ONLY the JSON object, no markdown formatting, no explanations.
 
 Resume Text:
