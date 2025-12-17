@@ -7,9 +7,10 @@ Production-grade FastAPI application with:
 - AI orchestration layer
 - Explainable analysis outputs
 """
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
 from datetime import datetime
 import logging
@@ -143,7 +144,25 @@ app.add_middleware(InputSanitizationMiddleware, strict_mode=False)
 # =============================================================================
 # EXCEPTION HANDLERS
 # =============================================================================
-
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Handle HTTPException with CORS headers"""
+    request_id = getattr(request.state, "request_id", None)
+    
+    cors_headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
+    if request_id:
+        cors_headers["X-Request-ID"] = request_id
+    
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=cors_headers
+    )
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler with structured logging"""
@@ -157,6 +176,16 @@ async def global_exception_handler(request: Request, exc: Exception):
         error_message=str(exc)
     )
     
+    # Add CORS headers to error responses
+    cors_headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
+    if request_id:
+        cors_headers["X-Request-ID"] = request_id
+    
     return JSONResponse(
         status_code=500,
         content={
@@ -165,7 +194,7 @@ async def global_exception_handler(request: Request, exc: Exception):
             "message": "An unexpected error occurred. Please try again.",
             "request_id": request_id
         },
-        headers={"X-Request-ID": request_id} if request_id else {}
+        headers=cors_headers
     )
 
 
