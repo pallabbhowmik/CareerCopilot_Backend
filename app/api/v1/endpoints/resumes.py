@@ -4,7 +4,7 @@ from typing import List
 from app.db.session import get_db
 from app.services.resume_parser import parse_resume_file
 from app.services.ats_explainability import calculate_ats_readiness
-from app.models.all_models import Resume, User
+from app.models.all_models import Resume, UserProfile
 from app.schemas.resume import ResumeInDB, ResumeUpdate, ResumeUploadResponse
 from app.api.v1.endpoints.auth import get_current_user
 import os
@@ -24,7 +24,7 @@ async def upload_options():
 async def upload_resume(
     file: UploadFile = File(...), 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: UserProfile = Depends(get_current_user)
 ):
     """
     Upload and parse a resume (PDF/DOCX).

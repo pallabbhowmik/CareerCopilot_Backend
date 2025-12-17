@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.models.all_models import User
+from app.models.all_models import UserProfile
 from app.api.v1.endpoints.auth import get_current_user
 from app.services.llm_engine import ai_service
 
@@ -18,6 +18,10 @@ class ChatResponse(BaseModel):
 
 @router.post("/chat", response_model=ChatResponse)
 async def career_chat(
+    request: ChatRequest,
+    db: Session = Depends(get_db),
+    current_user: UserProfile = Depends(get_current_user)
+):
     request: ChatRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

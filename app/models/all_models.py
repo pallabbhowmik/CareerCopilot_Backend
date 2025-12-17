@@ -1,103 +1,69 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Text, JSON, DateTime, Boolean
+from sqlalchemy import Column, String, ForeignKey, Text, JSON, DateTime, Boolean, Integer, Float
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.session import Base
+import uuid
 
-class User(Base):
-    __tablename__ = "users"
+class UserProfile(Base):
+    __tablename__ = "user_profiles"
 
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), unique=True, nullable=False) # References auth.users
+    email = Column(String, unique=True, nullable=False)
     full_name = Column(String)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
-    # Onboarding & Goals
     target_role = Column(String)
-    experience_level = Column(String) # Fresher, Mid, Senior
+    experience_level = Column(String)
     country = Column(String)
     career_goal = Column(Text)
     onboarding_completed = Column(Boolean, default=False)
     
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True))
+
     resumes = relationship("Resume", back_populates="owner")
-    analyses = relationship("Analysis", back_populates="owner")
-    applications = relationship("Application", back_populates="owner")
 
 class Resume(Base):
     __tablename__ = "resumes"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    template_id = Column(Integer, ForeignKey("templates.id"), nullable=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("user_profiles.user_id"), nullable=False)
+    title = Column(String, nullable=False)
+    template_id = Column(UUID(as_uuid=True), nullable=True)
     
-    title = Column(String)
-    content_raw = Column(Text) # Original text content
-    content_structured = Column(JSON) # Parsed JSON structure
-    style_config = Column(JSON) # User overrides for the template
+    current_version_id = Column(UUID(as_uuid=True), nullable=True)
+    variant_group_id = Column(UUID(as_uuid=True), nullable=True)
+    is_control = Column(Boolean, default=True)
     
-    # Heatmap & Quality Scores
-    heatmap_data = Column(JSON) # Section-level quality scores
-    bullet_feedback = Column(JSON) # Bullet-level AI feedback
-    strength_score = Column(Integer, default=0) # 0-100 overall resume strength
-    
-    # A/B Testing
-    variant_group_id = Column(String, index=True, nullable=True) # ID to group variants
-    version = Column(Integer, default=1)
-    parent_resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=True)
-    
-    file_path = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True))
 
-    owner = relationship("User", back_populates="resumes")
-    template = relationship("Template", back_populates="resumes")
-    analyses = relationship("Analysis", back_populates="resume")
-    applications = relationship("Application", back_populates="resume")
+    owner = relationship("UserProfile", back_populates="resumes")
 
 class JobDescription(Base):
     __tablename__ = "job_descriptions"
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String)
-    company = Column(String)
-    content_raw = Column(Text)
-    requirements_structured = Column(JSON) # Extracted skills/reqs
-    url = Column(String, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    analyses = relationship("Analysis", back_populates="job_description")
-
-class Analysis(Base):
-    __tablename__ = "analyses"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    resume_id = Column(Integer, ForeignKey("resumes.id"))
-    job_description_id = Column(Integer, ForeignKey("job_descriptions.id"))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("user_profiles.user_id"), nullable=False)
+    title = Column(String, nullable=False)
+    company = Column(String, nullable=False)
+    location = Column(String)
+    job_url = Column(String)
     
-    score_data = Column(JSON) # Detailed scoring breakdown
-    gap_analysis = Column(JSON) # Missing skills, etc.
-    recommendations = Column(JSON) # Actionable advice
+    raw_text = Column(Text, nullable=False)
+    parsed_data = Column(JSON)
+    
+    experience_required = Column(Text)
+    education_required = Column(Text)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True))
 
-    owner = relationship("User", back_populates="analyses")
-    resume = relationship("Resume", back_populates="analyses")
-    job_description = relationship("JobDescription", back_populates="analyses")
+# Placeholder for other models if needed
 
-class Template(Base):
-    __tablename__ = "templates"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
-    slug = Column(String, nullable=True)
-    category = Column(String) # e.g., "ATS-Safe", "Creative", "Developer"
-    description = Column(Text, nullable=True)
-    config_json = Column(JSON) # Template configuration
-    preview_url = Column(String, nullable=True)
-    preview_image_url = Column(String, nullable=True)
-    is_premium = Column(Boolean, default=False)
     is_ats_safe = Column(Boolean, default=True)
     is_active = Column(Boolean, default=True)
     recommended_for = Column(JSON, default=list)  # List of role types
