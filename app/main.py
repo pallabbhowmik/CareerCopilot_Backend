@@ -105,6 +105,28 @@ app = FastAPI(
 # MIDDLEWARE STACK (order matters - last added = first executed)
 # =============================================================================
 
+# 0. Force CORS on ALL responses (even errors from Starlette/Uvicorn)
+@app.middleware("http")
+async def force_cors_middleware(request: Request, call_next):
+    """Force CORS headers on every response, including low-level errors"""
+    try:
+        response = await call_next(request)
+    except Exception as e:
+        # Even on crashes, return response with CORS
+        from fastapi.responses import JSONResponse
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"}
+        )
+    
+    # Force CORS headers on ALL responses
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    
+    return response
+
 # 1. CORS (must be first to handle preflight)
 app.add_middleware(
     CORSMiddleware,
