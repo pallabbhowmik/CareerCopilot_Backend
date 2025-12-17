@@ -46,6 +46,7 @@ CREATE TABLE resumes (
     variant_group_id INTEGER,
     version INTEGER DEFAULT 1,
     parent_resume_id INTEGER REFERENCES resumes(id),
+    file_path VARCHAR(500),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
