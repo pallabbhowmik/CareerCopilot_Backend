@@ -15,6 +15,11 @@ router = APIRouter()
 UPLOAD_DIR = "uploads/resumes"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+@router.options("/upload")
+async def upload_options():
+    """Handle CORS preflight for upload endpoint"""
+    return {"status": "ok"}
+
 @router.post("/upload", response_model=ResumeUploadResponse)
 async def upload_resume(
     file: UploadFile = File(...), 
