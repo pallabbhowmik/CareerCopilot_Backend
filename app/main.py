@@ -14,6 +14,7 @@ from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
 from datetime import datetime
 import logging
+import os
 
 from app.core.config import settings
 from app.api.v1.api import api_router
@@ -127,6 +128,14 @@ async def force_cors_middleware(request: Request, call_next):
     response.headers["Vary"] = "Origin"
     response.headers["Access-Control-Allow-Methods"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "*"
+
+    # Ensure we never emit credentials unless explicitly intended.
+    # This prevents invalid combinations like ACAO='*' + ACAC='true'.
+    response.headers.pop("Access-Control-Allow-Credentials", None)
+
+    # Expose deploy/version info for debugging (Render sets RENDER_GIT_COMMIT).
+    deploy_commit = os.getenv("RENDER_GIT_COMMIT") or os.getenv("GIT_COMMIT") or "unknown"
+    response.headers["X-Deploy-Commit"] = deploy_commit
     
     return response
 
