@@ -111,7 +111,7 @@ async def force_cors_middleware(request: Request, call_next):
     """Force CORS headers on every response, including low-level errors"""
     try:
         response = await call_next(request)
-    except Exception as e:
+    except Exception:
         # Even on crashes, return response with CORS
         from fastapi.responses import JSONResponse
         response = JSONResponse(
@@ -120,7 +120,11 @@ async def force_cors_middleware(request: Request, call_next):
         )
     
     # Force CORS headers on ALL responses
-    response.headers["Access-Control-Allow-Origin"] = "*"
+    # Use the incoming Origin when present. Using '*' alongside credentials can be
+    # rejected by browsers, which then surfaces as a misleading "no ACAO header" error.
+    origin = request.headers.get("origin")
+    response.headers["Access-Control-Allow-Origin"] = origin or "*"
+    response.headers["Vary"] = "Origin"
     response.headers["Access-Control-Allow-Credentials"] = "true"
     response.headers["Access-Control-Allow-Methods"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "*"
