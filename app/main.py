@@ -125,7 +125,6 @@ async def force_cors_middleware(request: Request, call_next):
     origin = request.headers.get("origin")
     response.headers["Access-Control-Allow-Origin"] = origin or "*"
     response.headers["Vary"] = "Origin"
-    response.headers["Access-Control-Allow-Credentials"] = "true"
     response.headers["Access-Control-Allow-Methods"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "*"
     
@@ -135,7 +134,9 @@ async def force_cors_middleware(request: Request, call_next):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS if settings.BACKEND_CORS_ORIGINS else ["*"],
-    allow_credentials=True,
+    # We're using Bearer tokens (Authorization header), not cookies.
+    # Disabling credentials avoids browsers rejecting wildcard origins.
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "X-Request-ID"]
@@ -177,7 +178,6 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     
     cors_headers = {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Methods": "*",
         "Access-Control-Allow-Headers": "*",
     }
@@ -197,7 +197,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     
     cors_headers = {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Methods": "*",
         "Access-Control-Allow-Headers": "*",
     }
@@ -229,7 +228,6 @@ async def global_exception_handler(request: Request, exc: Exception):
     # Add CORS headers to error responses
     cors_headers = {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Methods": "*",
         "Access-Control-Allow-Headers": "*",
     }
