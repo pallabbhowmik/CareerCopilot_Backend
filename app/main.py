@@ -131,7 +131,8 @@ async def force_cors_middleware(request: Request, call_next):
 
     # Ensure we never emit credentials unless explicitly intended.
     # This prevents invalid combinations like ACAO='*' + ACAC='true'.
-    response.headers.pop("Access-Control-Allow-Credentials", None)
+    if "Access-Control-Allow-Credentials" in response.headers:
+        del response.headers["Access-Control-Allow-Credentials"]
 
     # Expose deploy/version info for debugging (Render sets RENDER_GIT_COMMIT).
     deploy_commit = os.getenv("RENDER_GIT_COMMIT") or os.getenv("GIT_COMMIT") or "unknown"
