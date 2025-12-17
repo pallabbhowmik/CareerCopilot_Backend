@@ -189,7 +189,10 @@ class InputSanitizationMiddleware(BaseHTTPMiddleware):
             )
         
         # For POST/PUT/PATCH, sanitize body
-        if request.method in ["POST", "PUT", "PATCH"]:
+        # Skip multipart/form-data (file uploads) as reading the body would consume the stream
+        # and binary data shouldn't be sanitized as text
+        content_type = request.headers.get("content-type", "")
+        if request.method in ["POST", "PUT", "PATCH"] and not content_type.startswith("multipart/form-data"):
             try:
                 body = await request.body()
                 if body:

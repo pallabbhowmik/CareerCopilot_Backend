@@ -140,18 +140,6 @@ async def force_cors_middleware(request: Request, call_next):
     
     return response
 
-# 1. CORS (must be first to handle preflight)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS if settings.BACKEND_CORS_ORIGINS else ["*"],
-    # We're using Bearer tokens (Authorization header), not cookies.
-    # Disabling credentials avoids browsers rejecting wildcard origins.
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "X-Request-ID"]
-)
-
 # 2. Security headers
 app.add_middleware(SecurityHeadersMiddleware)
 
@@ -176,6 +164,18 @@ app.add_middleware(
 
 # 6. Input sanitization
 app.add_middleware(InputSanitizationMiddleware, strict_mode=False)
+
+# 7. CORS (must be last added to be the outermost middleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.BACKEND_CORS_ORIGINS if settings.BACKEND_CORS_ORIGINS else ["*"],
+    # We're using Bearer tokens (Authorization header), not cookies.
+    # Disabling credentials avoids browsers rejecting wildcard origins.
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "X-Request-ID"]
+)
 
 
 # =============================================================================
