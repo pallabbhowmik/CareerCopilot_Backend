@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Dict, Any, List
@@ -8,6 +8,7 @@ from app.models.all_models import Resume, JobDescription, Analysis, UserProfile
 from app.api.v1.endpoints.auth import get_current_user
 from app.services.llm_engine import ai_service
 from app.services.ats_explainability import calculate_ats_readiness
+from app.services.resume_parser import parse_resume_file
 
 router = APIRouter()
 
@@ -29,6 +30,27 @@ class BulletImproveResponse(BaseModel):
     score_before: int
     score_after: int
     improvements: List[str] = []
+
+
+@router.post("/parse-resume-file")
+async def parse_resume_file_endpoint(
+    file: UploadFile = File(...),
+    current_user: UserProfile = Depends(get_current_user),
+):
+    """Parse an uploaded resume file into structured JSON.
+
+    Notes:
+    - Authenticated (uses Supabase JWT)
+    - Does not write to DB; frontend persists into Supabase resume tables
+    """
+    try:
+        parsed = await parse_resume_file(file)
+        ats_readiness = calculate_ats_readiness(parsed)
+        return {"parsed": parsed, "ats_readiness": ats_readiness}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error parsing resume: {str(e)}")
 
 @router.post("/job-description")
 async def create_job_description(
