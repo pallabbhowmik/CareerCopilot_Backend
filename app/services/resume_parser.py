@@ -129,18 +129,42 @@ def heuristic_extract_resume_info(raw_text: str) -> Dict[str, Any]:
 
     sections = extract_sections(text)
 
-    # Summary
+    # Summary: extract clean professional summary, skip location/date lines
     summary = (sections.get("summary") or "").strip()
+    if summary:
+        # Clean up summary: remove location/date lines
+        summary_lines = _split_lines(summary)
+        clean_summary = []
+        for ln in summary_lines:
+            # Skip lines with dates like "Jan 2022" or "2022-Present"
+            if re.search(r"\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{4})\b", ln, re.IGNORECASE):
+                continue
+            # Skip lines with location patterns like "City, Country |"
+            if re.search(r"\w+,\s*\w+\s*\|", ln):
+                continue
+            # Skip very short lines (likely headers/dates)
+            if len(ln) < 20:
+                continue
+            # Keep substantial summary lines
+            if len(ln) >= 40:
+                clean_summary.append(ln)
+        summary = " ".join(clean_summary).strip()
+    
     if not summary:
-        # fallback: first ~2 lines after the first heading
+        # fallback: first ~2-3 substantial lines that look like summary
         summary_candidates: List[str] = []
         for ln in lines[:80]:
             if _is_heading(ln):
                 continue
             if len(ln) < 40:
                 continue
+            # Skip date/location patterns
+            if re.search(r"\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{4})\b", ln, re.IGNORECASE):
+                continue
+            if re.search(r"\w+,\s*\w+\s*\|", ln):
+                continue
             summary_candidates.append(ln)
-            if len(summary_candidates) >= 2:
+            if len(summary_candidates) >= 3:
                 break
         summary = " ".join(summary_candidates).strip()
 
@@ -189,45 +213,115 @@ def heuristic_extract_resume_info(raw_text: str) -> Dict[str, Any]:
         dedup.append(s)
     skills = dedup[:30]
 
-    # Experience bullets
+    # Experience: parse by company/role with bullets
     exp_text = sections.get("experience") or ""
-    exp_lines = _split_lines(exp_text) if exp_text else []
-    bullets: List[str] = []
-    for ln in exp_lines:
-        if _is_heading(ln):
-            continue
-        cleaned = _clean_bullet(ln)
-        if not cleaned:
-            continue
-        # Prefer bullet-like lines or strong sentence lines
-        if re.match(r"^[\-•●◆■◦*]", ln.strip()):
-            bullets.append(cleaned)
-        elif len(cleaned) >= 45 and re.search(r"\b(led|built|designed|improved|reduced|increased|implemented|optimized|migrated|developed|engineered)\b", cleaned, re.IGNORECASE):
-            bullets.append(cleaned)
-
-    if not bullets and exp_lines:
-        # fallback: take any sentence-like lines
+    experience: List[Dict[str, Any]] = []
+    
+    if exp_text:
+        exp_lines = _split_lines(exp_text)
+        current_company = ""
+        current_role = ""
+        current_location = ""
+        current_dates = ""
+        current_bullets: List[str] = []
+        
+        action_verbs = r"\b(built|developed|led|designed|implemented|improved|reduced|increased|optimized|migrated|engineered|created|managed|coordinated|established|delivered|achieved|accelerated|innovated|integrated|automated|scaled|streamlined|enhanced)\b"
+        
         for ln in exp_lines:
+            # Skip headings
+            if _is_heading(ln):
+                continue
+            
+            # Check if line is a company/role header (has dates like "2022-Present" or "Jan 2022")
+            has_date = re.search(r"\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{4}|present)\b", ln, re.IGNORECASE)
+            has_location = re.search(r"\w+,\s*\w+", ln)
+            
+            # If line has dates and is short-ish, likely a job header
+            if has_date and len(ln) < 150:
+                # Save previous job if exists
+                if current_bullets:
+                    experience.append({
+                        "company": current_company,
+                        "role": current_role,
+                        "start_date": "",
+                        "end_date": "",
+                        "location": current_location,
+                        "bullets": current_bullets[:15],
+                        "is_current": "present" in ln.lower()
+                    })
+                
+                # Parse new job header
+                # Pattern: "Company — Role" or "Role at Company" or just "Company"
+                parts = re.split(r"[—–-]{2,}|\sat\s", ln)
+                if len(parts) >= 2:
+                    current_company = parts[0].strip()
+                    current_role = parts[1].split("|")[0].strip()
+                else:
+                    # Try to extract company (before location/date)
+                    if has_location:
+                        current_company = re.split(r"[,|]", ln)[0].strip()
+                    else:
+                        current_company = ln.split("|")[0].strip()
+                    current_role = ""
+                
+                if has_location:
+                    loc_match = re.search(r"([\w\s]+,\s*[\w\s]+)", ln)
+                    if loc_match:
+                        current_location = loc_match.group(1).strip()
+                
+                current_dates = ln
+                current_bullets = []
+                continue
+            
+            # Otherwise, it's a bullet point
+            cleaned = _clean_bullet(ln)
+            if not cleaned:
+                continue
+            
+            # Filter out non-bullet lines (too short, no action verbs)
+            if len(cleaned) < 30:
+                continue
+            
+            # Must have action verb or be a bullet-formatted line
+            is_bullet = re.match(r"^[\-•●◆■◦*]", ln.strip())
+            has_action = re.search(action_verbs, cleaned, re.IGNORECASE)
+            
+            if is_bullet or has_action:
+                current_bullets.append(cleaned)
+        
+        # Save last job
+        if current_bullets:
+            experience.append({
+                "company": current_company,
+                "role": current_role,
+                "start_date": "",
+                "end_date": "",
+                "location": current_location,
+                "bullets": current_bullets[:15],
+                "is_current": False
+            })
+    
+    # Fallback: if no structured experience found, extract all bullets generically
+    if not experience and exp_text:
+        exp_lines = _split_lines(exp_text)
+        bullets: List[str] = []
+        for ln in exp_lines:
+            if _is_heading(ln):
+                continue
             cleaned = _clean_bullet(ln)
             if len(cleaned) >= 40:
                 bullets.append(cleaned)
-
-    bullets = bullets[:25]
-
-    experience: List[Dict[str, Any]] = []
-    if bullets:
-        # We keep a single aggregated experience entry (no company/date parsing) to power the editor.
-        experience.append(
-            {
+        
+        if bullets:
+            experience.append({
                 "company": "",
                 "role": "",
                 "start_date": "",
                 "end_date": "",
                 "location": "",
-                "bullets": bullets,
-                "is_current": False,
-            }
-        )
+                "bullets": bullets[:25],
+                "is_current": False
+            })
 
     return {
         "name": name,
