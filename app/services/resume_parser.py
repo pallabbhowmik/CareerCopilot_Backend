@@ -8,11 +8,15 @@ from app.services.llm_engine import ai_service
 
 
 SECTION_HEADERS = {
-    "experience": ["experience", "work history", "employment", "professional experience"],
-    "education": ["education", "academic background"],
-    "skills": ["skills", "technical skills", "core competencies", "core skills"],
-    "projects": ["projects", "personal projects"],
-    "summary": ["summary", "professional summary", "objective", "profile"],
+    "experience": ["experience", "work history", "employment", "professional experience", "work experience"],
+    "education": ["education", "academic background", "academic qualifications"],
+    "skills": ["skills", "technical skills", "core competencies", "core skills", "technical competencies"],
+    "projects": ["projects", "personal projects", "side projects", "portfolio"],
+    "summary": ["summary", "professional summary", "objective", "profile", "about me"],
+    "certifications": ["certifications", "certificates", "licenses", "credentials"],
+    "languages": ["languages", "language proficiency"],
+    "awards": ["awards", "honors", "achievements", "recognition"],
+    "publications": ["publications", "research", "papers"],
 }
 
 
@@ -45,6 +49,12 @@ def _extract_linkedin(text: str) -> str:
     return m.group(0) if m else ""
 
 
+def _extract_github(text: str) -> str:
+    """Extract GitHub profile URL."""
+    m = re.search(r"(https?://)?(www\.)?github\.com/[A-Za-z0-9\-_]+", text, re.IGNORECASE)
+    return m.group(0) if m else ""
+
+
 def _extract_website(text: str) -> str:
     m = re.search(r"(https?://)?(www\.)?[A-Za-z0-9\-]+\.[A-Za-z]{2,}(/[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]*)?", text)
     if not m:
@@ -58,6 +68,45 @@ def _extract_website(text: str) -> str:
 
 def _split_lines(text: str) -> List[str]:
     return [ln.strip() for ln in (text or "").splitlines() if ln and ln.strip()]
+
+
+def _extract_location(text: str) -> str:
+    """Extract location from resume (city, state/country format)."""
+    # Pattern: City, State/Country (e.g., "San Francisco, CA" or "Mumbai, India")
+    location_pattern = r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*),\s*([A-Z]{2}|[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b'
+    match = re.search(location_pattern, text)
+    if match:
+        return match.group(0)
+    return ""
+
+
+def _extract_dates(line: str) -> tuple:
+    """Extract start_date and end_date from a line."""
+    # Patterns: "Jan 2020 - Present", "2020-2023", "January 2020 to Dec 2023"
+    # Format 1: Month Year - Month Year or Present
+    month_year_pattern = r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{4})'
+    matches = re.findall(month_year_pattern, line, re.IGNORECASE)
+    
+    if matches:
+        start_date = f"{matches[0][0]} {matches[0][1]}" if matches else ""
+        end_date = f"{matches[1][0]} {matches[1][1]}" if len(matches) > 1 else ""
+        if not end_date and re.search(r'\bpresent\b', line, re.IGNORECASE):
+            end_date = "Present"
+        return (start_date, end_date)
+    
+    # Format 2: YYYY - YYYY or YYYY-YYYY
+    year_pattern = r'(\d{4})\s*[\-–—to]+\s*(\d{4}|Present)'
+    year_match = re.search(year_pattern, line, re.IGNORECASE)
+    if year_match:
+        return (year_match.group(1), year_match.group(2))
+    
+    # Format 3: Single year or "Present"
+    if re.search(r'\bpresent\b', line, re.IGNORECASE):
+        year_match = re.search(r'(\d{4})', line)
+        if year_match:
+            return (year_match.group(1), "Present")
+    
+    return ("", "")
 
 
 def _looks_like_mock(ai_output: Dict[str, Any]) -> bool:
@@ -86,7 +135,9 @@ def heuristic_extract_resume_info(raw_text: str) -> Dict[str, Any]:
     email = extract_email(joined)
     phone = extract_phone(joined)
     linkedin = _extract_linkedin(joined)
+    github = _extract_github(joined)
     website = _extract_website(joined)
+    location = _extract_location(joined)
 
     # Name heuristics:
     # 1) line before email
@@ -222,7 +273,8 @@ def heuristic_extract_resume_info(raw_text: str) -> Dict[str, Any]:
         current_company = ""
         current_role = ""
         current_location = ""
-        current_dates = ""
+        current_start_date = ""
+        current_end_date = ""
         current_bullets: List[str] = []
         
         action_verbs = r"\b(built|developed|led|designed|implemented|improved|reduced|increased|optimized|migrated|engineered|created|managed|coordinated|established|delivered|achieved|accelerated|innovated|integrated|automated|scaled|streamlined|enhanced)\b"
@@ -243,12 +295,15 @@ def heuristic_extract_resume_info(raw_text: str) -> Dict[str, Any]:
                     experience.append({
                         "company": current_company,
                         "role": current_role,
-                        "start_date": "",
-                        "end_date": "",
+                        "start_date": current_start_date,
+                        "end_date": current_end_date,
                         "location": current_location,
                         "bullets": current_bullets[:15],
-                        "is_current": "present" in ln.lower()
+                        "is_current": "present" in current_end_date.lower()
                     })
+                
+                # Extract dates from current line
+                current_start_date, current_end_date = _extract_dates(ln)
                 
                 # Parse new job header
                 # Pattern: "Company — Role" or "Role at Company" or just "Company"
@@ -294,11 +349,11 @@ def heuristic_extract_resume_info(raw_text: str) -> Dict[str, Any]:
             experience.append({
                 "company": current_company,
                 "role": current_role,
-                "start_date": "",
-                "end_date": "",
+                "start_date": current_start_date,
+                "end_date": current_end_date,
                 "location": current_location,
                 "bullets": current_bullets[:15],
-                "is_current": False
+                "is_current": "present" in current_end_date.lower() if current_end_date else False
             })
     
     # Fallback: if no structured experience found, extract all bullets generically
@@ -323,20 +378,206 @@ def heuristic_extract_resume_info(raw_text: str) -> Dict[str, Any]:
                 "is_current": False
             })
 
+    # Education parsing
+    education: List[Dict[str, Any]] = []
+    edu_text = sections.get("education") or ""
+    if edu_text:
+        edu_lines = _split_lines(edu_text)
+        current_institution = ""
+        current_degree = ""
+        current_field = ""
+        current_location = ""
+        start_date = ""
+        end_date = ""
+        gpa = ""
+        
+        for ln in edu_lines:
+            if _is_heading(ln):
+                continue
+            
+            # Check if line has dates (likely institution header)
+            dates = _extract_dates(ln)
+            if dates[0]:
+                # Save previous education entry
+                if current_institution or current_degree:
+                    education.append({
+                        "institution": current_institution,
+                        "degree": current_degree,
+                        "field": current_field,
+                        "start_date": start_date,
+                        "end_date": end_date,
+                        "gpa": gpa,
+                        "location": current_location
+                    })
+                
+                # Parse new education entry
+                start_date, end_date = dates
+                # Extract institution (usually before location or dates)
+                parts = re.split(r'[,|]', ln)
+                current_institution = parts[0].strip() if parts else ln.strip()
+                
+                # Try to extract location
+                loc_match = re.search(r'([\w\s]+,\s*[\w\s]+)', ln)
+                if loc_match:
+                    current_location = loc_match.group(1).strip()
+                
+                current_degree = ""
+                current_field = ""
+                gpa = ""
+                continue
+            
+            # Check for GPA
+            gpa_match = re.search(r'GPA:?\s*(\d+\.\d+|\d+/\d+)', ln, re.IGNORECASE)
+            if gpa_match:
+                gpa = gpa_match.group(1)
+                continue
+            
+            # Check for degree patterns (Bachelor, Master, PhD, etc.)
+            degree_keywords = r'\b(Bachelor|Master|MBA|PhD|B\.S\.|M\.S\.|B\.A\.|M\.A\.|B\.Tech|M\.Tech|B\.E\.|M\.E\.)\b'
+            if re.search(degree_keywords, ln, re.IGNORECASE):
+                # This line likely contains degree and field
+                current_degree = ln.strip()
+                # Try to split degree and field (e.g., "Bachelor of Science in Computer Science")
+                if " in " in ln.lower():
+                    parts = re.split(r'\s+in\s+', ln, flags=re.IGNORECASE)
+                    current_degree = parts[0].strip()
+                    current_field = parts[1].strip() if len(parts) > 1 else ""
+                continue
+        
+        # Save last education entry
+        if current_institution or current_degree:
+            education.append({
+                "institution": current_institution,
+                "degree": current_degree,
+                "field": current_field,
+                "start_date": start_date,
+                "end_date": end_date,
+                "gpa": gpa,
+                "location": current_location
+            })
+    
+    # Projects parsing
+    projects: List[Dict[str, Any]] = []
+    projects_text = sections.get("projects") or ""
+    if projects_text:
+        project_lines = _split_lines(projects_text)
+        current_project = ""
+        current_description = []
+        current_tech = []
+        
+        for ln in project_lines:
+            if _is_heading(ln):
+                continue
+            
+            # Project name is usually bold/standalone short line or has dates
+            if len(ln) < 100 and not ln.startswith(("•", "-", "●")) and current_project and current_description:
+                # Save previous project
+                projects.append({
+                    "name": current_project,
+                    "description": " ".join(current_description),
+                    "technologies": current_tech,
+                    "link": ""
+                })
+                current_project = ln.strip()
+                current_description = []
+                current_tech = []
+                continue
+            
+            if not current_project:
+                current_project = ln.strip()
+                continue
+            
+            # Check for tech stack line
+            if "technologies" in ln.lower() or "tech stack" in ln.lower() or "built with" in ln.lower():
+                # Extract technologies
+                tech_part = re.split(r':', ln, 1)
+                if len(tech_part) > 1:
+                    current_tech = [t.strip() for t in re.split(r'[,|/]', tech_part[1]) if t.strip()]
+                continue
+            
+            # Otherwise it's description
+            cleaned = _clean_bullet(ln)
+            if cleaned and len(cleaned) > 15:
+                current_description.append(cleaned)
+        
+        # Save last project
+        if current_project:
+            projects.append({
+                "name": current_project,
+                "description": " ".join(current_description),
+                "technologies": current_tech,
+                "link": ""
+            })
+    
+    # Certifications parsing
+    certifications: List[Dict[str, Any]] = []
+    cert_text = sections.get("certifications") or ""
+    if cert_text:
+        cert_lines = _split_lines(cert_text)
+        for ln in cert_lines:
+            if _is_heading(ln):
+                continue
+            cleaned = _clean_bullet(ln)
+            if cleaned and len(cleaned) > 5:
+                # Extract cert name and issuer
+                # Pattern: "Cert Name - Issuer" or "Cert Name, Issuer"
+                parts = re.split(r'[-–—,|]', cleaned, 1)
+                cert_name = parts[0].strip()
+                issuer = parts[1].strip() if len(parts) > 1 else ""
+                
+                # Try to extract date
+                dates = _extract_dates(ln)
+                issue_date = dates[1] if dates[1] else dates[0] if dates[0] else ""
+                
+                certifications.append({
+                    "name": cert_name,
+                    "issuer": issuer,
+                    "issue_date": issue_date,
+                    "credential_id": ""
+                })
+    
+    # Languages parsing
+    languages: List[str] = []
+    lang_text = sections.get("languages") or ""
+    if lang_text:
+        # Split on common delimiters
+        lang_items = re.split(r'[,\n|/]+', lang_text)
+        for item in lang_items:
+            cleaned = _clean_bullet(item)
+            # Remove proficiency levels
+            cleaned = re.sub(r'\(.*?\)', '', cleaned).strip()
+            cleaned = re.sub(r'\b(native|fluent|proficient|intermediate|basic|elementary)\b', '', cleaned, flags=re.IGNORECASE).strip()
+            if cleaned and len(cleaned) > 2 and len(cleaned) < 30:
+                languages.append(cleaned)
+    
+    # Awards/Honors parsing (bonus)
+    awards: List[str] = []
+    awards_text = sections.get("awards") or ""
+    if awards_text:
+        award_lines = _split_lines(awards_text)
+        for ln in award_lines:
+            if _is_heading(ln):
+                continue
+            cleaned = _clean_bullet(ln)
+            if cleaned and len(cleaned) > 5:
+                awards.append(cleaned)
+
     return {
         "name": name,
         "email": email,
         "phone": phone,
         "linkedin": linkedin,
-        "location": "",
+        "github": github,
+        "location": location,
         "website": website,
         "summary": summary,
         "skills": skills,
         "experience": experience,
-        "education": [],
-        "projects": [],
-        "certifications": [],
-        "languages": [],
+        "education": education,
+        "projects": projects,
+        "certifications": certifications,
+        "languages": languages,
+        "awards": awards,
     }
 
 async def parse_resume_file(file: UploadFile) -> Dict[str, Any]:
@@ -412,6 +653,7 @@ def normalize_resume_structure(ai_output: Dict[str, Any], raw_text: str) -> Dict
             "email": ai_output.get("email", ""),
             "phone": ai_output.get("phone", ""),
             "linkedin": ai_output.get("linkedin", ""),
+            "github": ai_output.get("github", ""),
             "location": ai_output.get("location", ""),
             "website": ai_output.get("website", "")
         },
@@ -422,7 +664,8 @@ def normalize_resume_structure(ai_output: Dict[str, Any], raw_text: str) -> Dict
         "projects": ai_output.get("projects", []),
         "certifications": ai_output.get("certifications", []),
         "languages": ai_output.get("languages", []),
-        "sections_order": ["personal_info", "summary", "experience", "education", "skills"],
+        "awards": ai_output.get("awards", []),
+        "sections_order": ["personal_info", "summary", "experience", "education", "skills", "projects", "certifications", "languages", "awards"],
         "raw_text": raw_text[:5000]  # Store first 5000 chars for reference
     }
 
