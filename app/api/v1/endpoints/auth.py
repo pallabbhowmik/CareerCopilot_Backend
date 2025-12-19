@@ -12,7 +12,7 @@ router = APIRouter()
 # We don't have a login endpoint in FastAPI anymore, but we keep this for Swagger UI
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False)
 
-def get_current_user(
+async def get_current_user(
     token: str = Depends(oauth2_scheme), 
     db: Session = Depends(get_db)
 ) -> UserProfile:
@@ -25,7 +25,7 @@ def get_current_user(
     if not token:
         raise credentials_exception
 
-    payload = verify_supabase_token(token)
+    payload = await verify_supabase_token(token)
     if not payload:
         raise credentials_exception
         

@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     SUPABASE_URL: Optional[str] = None
     SUPABASE_KEY: Optional[str] = None
     SUPABASE_JWT_SECRET: Optional[str] = None
+    # Alias used elsewhere in the codebase (preferred name)
+    SUPABASE_ANON_KEY: Optional[str] = None
 
     model_config = SettingsConfigDict(case_sensitive=True, env_file=".env")
 
