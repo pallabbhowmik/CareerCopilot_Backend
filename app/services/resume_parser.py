@@ -269,15 +269,9 @@ async def parse_resume_file(file: UploadFile) -> Dict[str, Any]:
     else:
         raise ValueError("Unsupported file format. Please upload PDF or DOCX.")
     
-    # Extract structured data
-    # Prefer LLM when configured, but never fall back to mock content.
-    structured_data: Dict[str, Any]
-    if getattr(ai_service, "client", None):
-        structured_data = await ai_service.extract_resume_info(text)
-        if _looks_like_mock(structured_data):
-            structured_data = heuristic_extract_resume_info(text)
-    else:
-        structured_data = heuristic_extract_resume_info(text)
+    # Always use heuristic extraction (real content from PDF).
+    # If OpenAI is configured, we can enhance it later, but we start with real data.
+    structured_data = heuristic_extract_resume_info(text)
     
     # Post-process and normalize
     normalized_data = normalize_resume_structure(structured_data, text)
